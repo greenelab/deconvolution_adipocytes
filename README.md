@@ -2,7 +2,7 @@
 The following repository is a work in progress. The aim is to deconvolve HGSOC samples with added adipocyte signal.
 
 
-## Prior to running the first script (/scripts/1_get_data_and_clustering.R) in the repository, please make sure you have the following files/data:
+## Prior to running the first script (/scripts/1_get_data_and_clustering.R) in the repository, please make sure you have the following files/data from https://github.com/greenelab/hgsc_characterization:
 
 ### Reference Data:
 
