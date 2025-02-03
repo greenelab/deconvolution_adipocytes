@@ -109,7 +109,7 @@ save_dual_versions <- function(expr_merged, dataset_name, transform_type = c("rn
   save_filtered(expr_merged, dataset_name, suffix = "asImported")
   
   # 2) Create a “transformed” version
-  #    For RNA-seq (SchildkrautB/W), original script does log10(... + 1)
+  #    For RNA-seq (SchildkrautB/W), original.
   #    For microarray (TCGA, Mayo, Tothill, Yoshihara), do 2^(...)
   transform_type <- match.arg(transform_type)
   if (transform_type == "rnaseq") {
@@ -152,7 +152,7 @@ save_filtered <- function(expr_merged, dataset_name, suffix) {
 }
 
 ##########################################
-# Helper transformations for each domain #
+# Helper transformations for each data type #
 ##########################################
 
 # 1) For RNA-seq (SchildkrautB/W) => log10(... + 1)
