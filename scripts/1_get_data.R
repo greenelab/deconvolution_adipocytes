@@ -25,7 +25,7 @@ proj_dir <- file.path(getwd(), "prior_data")
 bulk_data_dir <- file.path(getwd(), "data/bulks")
 
 # Ensure directories exist
-dir.create(bulk_data_dir, recursive = TRUE, showWarnings = FALSE)
+dir.create(proj_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(bulk_data_dir, recursive = TRUE, showWarnings = FALSE)
 
 # Load Gene Mapping File
