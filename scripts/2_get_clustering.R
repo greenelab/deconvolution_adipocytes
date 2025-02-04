@@ -121,23 +121,14 @@ run_consensusOV <- function(samp_x_gene) {
   # Now run get.subtypes
   subtypes_res <- get.subtypes(gene_x_samp_filt, gene_ids_W, method='consensus')
   
-  # subtypes => subtypes_res$consensusOV.subtypes, named by col
-  # colnames(gene_x_samp_filt) => original sample IDs
-  sampleIDs <- colnames(gene_x_samp_filt)
-  subtypes_vec <- subtypes_res$consensusOV.subtypes[sampleIDs]
+  # Generate a dataframe that aligns sample ID with consensus subtype
+  out_df <- data.frame(ID = rownames(subtypes_res$rf.probs),
+                       consensusOVsubtype = subtypes_res$consensusOV.subtypes)
   
-  # We now have subtypes for the filtered set of genes. 
-  # But we want to store them for *all* samples in the original matrix
-  # The sample IDs are the same, so no problem. We'll align them.
-  # Then reorder subtypes to match rownames(samp_x_gene)
-  out_df <- data.frame(
-    ID = rownames(samp_x_gene),
-    consensusOV = rep(NA_character_, nrow(samp_x_gene)), # default NA
-    stringsAsFactors = FALSE
-  )
-  # match sampleIDs => rownames(samp_x_gene)
-  match_idx <- match(sampleIDs, rownames(samp_x_gene))
-  out_df$consensusOV[match_idx] <- subtypes_vec
+  # Ensure that no samples were accidentally filtered out
+  if (nrow(out_df) != nrow(samp_x_gene)) {
+    warning("consensusOV did not generate a result for all samples in ", ds)
+  }
   
   return(out_df)
 }
