@@ -28,10 +28,6 @@ The following repository is a work in progress. The aim is to deconvolve HGSOC s
 
 /data/way_pipeline_results_10removed_NeoRemoved_inclWhites/2.Clustering_DiffExprs-Tables-ClusterMembership/FullClusterMembership.csv
 
-/data/rna_seq_whites/salmon_normalized_filtered_for_way_pipeline_whites.tsv
-
-/data/rna_seq_whites/salmon_normalized_filtered_for_way_pipeline_whites_MAD.tsv
-
 ### Clustering and Expression Data:
 
 /data/mayo/MayoEset.Rda
@@ -56,4 +52,8 @@ Yoshihara dataset (loaded via data(GSE32062.GPL6480_eset), part of the curatedOv
 /data/rna_seq_pilot_and_new/salmon_normalized_filtered_for_way_pipeline.tsv
 
 /data/rna_seq_pilot_and_new/salmon_normalized_filtered_for_way_pipeline_MAD.tsv
+
+/data/rna_seq_whites/salmon_normalized_filtered_for_way_pipeline_whites.tsv
+
+/data/rna_seq_whites/salmon_normalized_filtered_for_way_pipeline_whites_MAD.tsv
 
