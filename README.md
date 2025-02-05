@@ -57,3 +57,23 @@ Yoshihara dataset (loaded via data(GSE32062.GPL6480_eset), part of the curatedOv
 
 /data/rna_seq_whites/salmon_normalized_filtered_for_way_pipeline_whites_MAD.tsv
 
+
+## Prior to running the third script (/scripts/3_prepare_reference_data.R) in the repository, please make sure you have the following files/data:
+
+### From https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE217517:
+
+### GSM6720933	Dissociated cells, pooled, single-cell sequenced, rep1:
+
+GSM6720933_pooled_single_cell_barcodes_12162021.tsv.gz
+
+GSM6720933_pooled_single_cell_features_12162021.tsv.gz
+
+GSM6720933_pooled_single_cell_matrix_12162021.mtx.gz
+
+### GSM6720934	Dissociated cells, pooled, single-cell sequenced, rep2:
+
+GSM6720934_pooled_single_cell_barcodes_01132022.tsv.gz
+
+GSM6720934_pooled_single_cell_features_01132022.tsv.gz
+
+GSM6720934_pooled_single_cell_matrix_01132022.mtx.gz
