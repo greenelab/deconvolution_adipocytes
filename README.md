@@ -144,7 +144,57 @@ GSM6720932_single_cell_matrix_2497.mtx.gz
 
 2497_labels.txt
 
+### From http://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE176171:
 
+### GSM5359325	Human visceral white adipose 01-1
 
+GSM5359325_Hs_OAT_01-1.dge.tsv.gz
 
+### GSM5359326	Human visceral white adipose 01-2
+
+GSM5359326_Hs_OAT_01-2.dge.tsv.gz
+
+### GSM5359327	Human visceral white adipose 253-1
+
+GSM5359327_Hs_OAT_253-1.dge.tsv.gz
+
+### GSM5359328	Human visceral white adipose 254-1
+
+GSM5359328_Hs_OAT_254-1.dge.tsv.gz
+
+### GSM5359329	Human visceral white adipose 255-1
+
+GSM5359329_Hs_OAT_255-1.dge.tsv.gz
+
+### GSM5359330	Human visceral white adipose 256-1
+
+GSM5359330_Hs_OAT_256-1.dge.tsv.gz
+
+### GSM5359331	Human subcutaneous white adipose 01-1
+
+GSM5359331_Hs_SAT_01-1.dge.tsv.gz
+
+### GSM5359332	Human subcutaneous white adipose 02-1
+
+GSM5359332_Hs_SAT_02-1.dge.tsv.gz
+
+### GSM5359333	Human subcutaneous white adipose 04-1
+
+GSM5359333_Hs_SAT_04-1.dge.tsv.gz
+
+### GSM5359334	Human subcutaneous white adipose 253-1
+
+GSM5359334_Hs_SAT_253-1.dge.tsv.gz
+
+### GSM5359335	Human subcutaneous white adipose 254-1
+
+GSM5359335_Hs_SAT_254-1.dge.tsv.gz
+
+### GSM5359336	Human subcutaneous white adipose 255-1
+
+GSM5359336_Hs_SAT_255-1.dge.tsv.gz
+
+### GSM5359337	Human subcutaneous white adipose 256-1
+
+GSM5359337_Hs_SAT_256-1.dge.tsv.gz
 
