@@ -93,17 +93,54 @@ for (n in c(seq.int(1,8))) {
 }
 
 # Now we need to isolate only the columns of the matrices that match with these overlapping cells
-
 for (n in c(seq.int(1,8))) {
   assign(paste0("rep",n,"_sc_matrix_subset"),
          get(paste0("rep",n,"_sc_matrix"))[,get(paste0("rep",n,"_sc_overlap_rows"))])
 }
 
 ##############################
-### 2) Create a probability matrix with the event probability of each gene's expression in each cell state
+### 2) Create the information required to input into InstaPrism
 ##############################
 
+# First we will create dataframes that associate the overlapping cell barcodes with their cell type labels
+for (n in c(seq.int(1,8))) {
+  assign(paste0("rep",n,"_sc_overlap_cells_labeled"),
+         filter(get(paste0("rep",n,"_sc_labels")),
+                get(paste0("rep",n,"_sc_labels"))[,1] %in% get(paste0("rep",n,"_sc_overlap_cells"))))
+}
 
+# Then we will create combined key that aligns cell barcodes with cell type
+all_sc_overlap_cells_labeled <- rbind(rep1_sc_overlap_cells_labeled,
+                                      rep2_sc_overlap_cells_labeled,
+                                      rep3_sc_overlap_cells_labeled,
+                                      rep4_sc_overlap_cells_labeled,
+                                      rep5_sc_overlap_cells_labeled,
+                                      rep6_sc_overlap_cells_labeled,
+                                      rep7_sc_overlap_cells_labeled,
+                                      rep8_sc_overlap_cells_labeled)
+
+# Let's ensure that the row names (genes), contained in the "features" objects, are
+# identical between reps so that the matrices can be accurately bound together horizontally.
+for (n in c(seq.int(2,8))) {
+  if(!identical(get(paste0("rep",n,"_sc_features")),rep1_sc_features)){
+    stop("Warning! Row names (genes) are not identical between reps.")
+  }
+}
+
+# Now we can create a data frame that combines the information in the matrices of all 8 reps
+for (n in c(seq.int(1,8))) {
+  assign(paste0("rep",n,"_sc_df"),
+         as.data.frame(as.matrix(get(paste0("rep",n,"_sc_matrix_subset")))))
+}
+
+all_sc_expr <- cbind(rep1_sc_df,
+                     rep2_sc_df,
+                     rep3_sc_df,
+                     rep4_sc_df,
+                     rep5_sc_df,
+                     rep6_sc_df,
+                     rep7_sc_df,
+                     rep8_sc_df)
 
 ##############################
 ### 3) Read the adipocyte snRNAseq data
@@ -111,22 +148,13 @@ for (n in c(seq.int(1,8))) {
 
 
 ##############################
-### 4) Create a probability matrix (1 column) with the event probability of each gene's expression in adipocytes
-##############################
-
-
-
-##############################
-### 5) Combine the large probability matrix with the adipocyte probability matrix
+### 4) Combine the scRNAseq data and the adipocyte snRNAseq data
 ##############################
 
 
 #only use genes in common
 
 
-##############################
-### 6) Write this final probability matrix
-##############################
 
 
 
