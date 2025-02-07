@@ -1,11 +1,21 @@
-#The following script opens files created in Python (deconvolution_differences/scripts/prepare_deconvolution.py)
-# and uses InsaPrism for deconvolution of the bulks in BayesPrism framework, using references with SC and SN, wihth DEG filtered and not.
+# Set up CAN repository (needed in SLUR M)
+options(repose = c(CRANE = "https://cloud.r-project.org"))
 
-# Import necessary libraries
+if(!requireNamespace("scran", quietly = TRUE)){
+  BiocManager::install("scran")
+}
+library(scran)
+
+# Load necessary libraries
 library(InstaPrism)
 library(BayesPrism)
 
-data_type = "ADP"
+# Get data type from SLURM argument
+args <- commandArgs(trailingOnly = TRUE)
+if (length(args) == 0) {
+  stop("Error: No data type provided. Run script with: Rscript BayesPrism.R <DATA_TYPE>")
+}
+data_type <- args[1]
 
 # Define the combinations of gene_type and reference_type
 combinations <- expand.grid(reference_type = c("sc", "sn"), gene_type = c("filtered", "notfiltered"))
@@ -16,63 +26,82 @@ for (i in 1:nrow(combinations)) {
   gene_type <- combinations$gene_type[i]
   reference_type <- combinations$reference_type[i]
   
-  ###################
-  #check if running in RStudio
+  # Detect script directory
   if (requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
-    # Get the directory where the R script resides in RStudio
     script_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
   } else {
-    # If not in RStudio, use a fallback method (e.g., set it manually)
-    script_dir <- ""
+    script_dir <- getwd()  # Default to current working directory if not in RStudio
   }
   
-  # Define the relative path based on the current combination
-  import_path <- file.path(script_dir, "..", "data/deconvolution/", data_type, "/")
+  # Define paths
+  import_path <- file.path(script_dir, "..", "data/deconvolution", data_type, "/")
+  export_path <- file.path(script_dir, "..", "results/", data_type, "/")
   
-  # Combine the script directory and relative path to get the full path
-  export_path <- paste0(relative_path, "results/", data_type, "/")
-  
-  # Define fil names based on the current combination
+  # Define file names
   mixture_file <- paste0(import_path, "pseudobulks.csv")
-  signal_file <- paste0(import_path,  data_type, "_", reference_type,"_", gene_type, "_signal.csv")
-  cell_state_file <- paste0(import_path ,  data_type, "_", reference_type,"_", gene_type, "_cell_state.csv")
-  export_file_prop <- paste0(export_path,  data_type, "_", reference_type,"_", gene_type, "_BayesPrism_proportionsresults.csv")
-  export_file_ref <- paste0(export_path, data_type, "_", reference_type,"_", gene_type, "_BayesPrism_usedref.csv")
+  signal_file <- paste0(import_path, reference_type, "_", gene_type, "_signal.csv")
+  cell_state_file <- paste0(import_path, reference_type, "_", gene_type, "_cell_state.csv")
+  export_file_prop <- paste0(export_path, reference_type, "_", gene_type, "_BayesPrism_proportionsresults_new.csv")
+  export_file_ref <- paste0(export_path, reference_type, "_", gene_type, "_BayesPrism_usedref_new.csv")
   
-  # read, inspect, mixture file as RDS
-  mixture_file_rds <- mixture_file
+  # Print paths to debug
+  cat("Import path:", import_path, "\n")
+  cat("Export path:", export_path, "\n")
+  cat("Mixture file:", mixture_file, "\n")
+  cat("Signal file:", signal_file, "\n")
+  cat("Cell state file:", cell_state_file, "\n")
+  
+  # Read mixture (pseudobulks)
   mixture_data <- read.csv(mixture_file, stringsAsFactors = FALSE, row.names = 1)
-  cat("Mixture Data:\n")
-  print(head(mixture_data[,1:3]))
+  cat("Mixture Data (before filtering):\n")
+  print(head(mixture_data[, 1:3]))
   
-  # read, inspect, signal files as RDS
-  signal_files_rds <- signal_file
+  # Read signal (reference)
   signal_data <- read.csv(signal_file, stringsAsFactors = FALSE, row.names = 1)
   cat("Signal Data:\n")
-  print(head(signal_data[,1:3]))
+  print(head(signal_data[, 1:3]))
   
-  # read, inspect, and save the cell state files as CSV
+  # Read cell state
   cell_state <- read.csv(cell_state_file)
   cat("Cell State Data:\n")
   print(head(cell_state))
   
+  # Ensure genes in pseudobulks match the reference
+  common_genes <- intersect(rownames(mixture_data), rownames(signal_data))
+  
+  if (length(common_genes) < 500) {
+    stop(paste("ERROR: Too few matching genes (", length(common_genes), ") between mixture and reference!"))
+  }
+  
+  # Filter and reorder mixture_data to match reference genes
+  mixture_data <- mixture_data[common_genes, ]
+  signal_data <- signal_data[common_genes, ]
+  
+  cat("Mixture Data (after filtering):\n")
+  print(head(mixture_data[, 1:3]))
+  
   ########################################################
-  ###### Roughly following IntaPrism tutorial: https://humengying0907.github.io/InstaPrism_tutorial.html
   bulk_Expr <- mixture_data
-  sc_Expr <- signal_data
   cell_type_labels <- t(cell_state[1])
   cell_state_labels <- t(cell_state[2])
   
-  InstaPrism.res = InstaPrism(input_type = 'raw',sc_Expr = sc_Expr,bulk_Expr = bulk_Expr,
-                              cell.type.labels = cell_type_labels,cell.state.labels = cell_state_labels)
+  scExpr <- SingleCellExperiment(assays = list(counts = as.matrix(signal_data)))
   
-  ##Export files: proportions estimated and references used
-  cell_frac = InstaPrism.res@Post.ini.cs@theta
-  write.table(cell_frac, export_file_prop, sep="\t", quote=F,  row.names = TRUE, col.names = TRUE,)
-  cell_ref = InstaPrism.res@initial.reference@phi.cs
-  write.table(cell_ref, export_file_ref, sep="\t", quote=F, row.names = TRUE, col.names = TRUE,)
+  refPhi_obj = refPrepare(
+    sc_Expr = assay(scExpr, "counts"),
+    cell.type.labels = cell_type_labels,
+    cell.state.labels = cell_state_labels
+  )
+  results = InstaPrism(bulk_Expr = bulk_Expr, refPhi_cs = refPhi_obj)
   
-  # Printing the value of num_missing and combination to keep track
-  cat(paste("Processing with genes = ", gene_type, "and reference type = ", reference_type), "\n")
+  # Export results
+  cell_frac <- results@Post.ini.cs@theta
+  write.table(cell_frac, export_file_prop, sep = "\t", quote = FALSE, row.names = TRUE, col.names = TRUE)
+  
+  cell_ref <- results@initial.reference@phi.cs
+  write.table(cell_ref, export_file_ref, sep = "\t", quote = FALSE, row.names = TRUE, col.names = TRUE)
+  
+  # Log progress
+  cat(paste("Processing completed for genes = ", gene_type, " and reference type = ", reference_type, "\n"))
 }
 
