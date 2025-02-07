@@ -375,6 +375,8 @@ colnames(all_expr_final) <- 1:ncol(all_expr_final)
 
 # Writing final files
 writeMM(all_expr_final, file.path(reference_data_dir, "000combined_reference_expr_final.csv"), row.names=TRUE, col.names=TRUE)
+write.csv(colnames(all_expr_final), file.path(reference_data_dir, "000combined_reference_expr_final_colnames.csv"))
+write.csv(rownames(all_expr_final), file.path(reference_data_dir, "000combined_reference_expr_final_rownames.csv"))
 write.csv(all_cell_type_final, file.path(reference_data_dir, "000combined_reference_cell_types_final.csv"), row.names=FALSE)
 
 
