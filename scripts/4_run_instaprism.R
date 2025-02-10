@@ -90,7 +90,7 @@ for (ds in dataset_list) {
 # Writing final files
 for (ds in dataset_list) {
   write.csv(t((get(paste0("instaprism_output_", ds))@Post.ini.ct@theta)),
-            file.path(export_dir, paste0("instaprism_output_", ds)),
+            file.path(export_dir, paste0("instaprism_output_", ds,".csv")),
             row.names=TRUE)
 }
 
