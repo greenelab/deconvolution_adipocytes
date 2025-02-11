@@ -57,22 +57,32 @@ select_cell_subsets <- function(cell_type_labels, n){
 
 # Using the function defined above to subset the genes x cells matrix and the cell type labels vector
 selected_cells <- select_cell_subsets(cell_type_labels, n = 500)
-scExpr_subset <- scExpr_all[, selected_cells]
-cell_type_labels_subset <- cell_type_labels[selected_cells]
+scExpr_subset_all <- scExpr_all[, selected_cells]
+cell_type_labels_subset_all <- cell_type_labels[selected_cells]
 
 # Removing large objects from R's memory to save room 
 rm(scExpr_all, cell_type_labels)
 gc()
 
-# Create reference object for input into InstaPrism
-refPhi_obj = refPrepare(sc_Expr = scExpr_subset, cell.type.labels = cell_type_labels_subset, cell.state.labels = cell_type_labels_subset)
+# Now create a version with no adipocytes
+adipos <- grep("Adipocytes", cell_type_labels_subset_all)
+scExpr_subset_no_adipos <- scExpr_subset_all[,-adipos]
+cell_type_labels_subset_no_adipos <- cell_type_labels_subset_all[-adipos]
+
+# Create reference objects for input into InstaPrism
+refPhi_obj_all = refPrepare(sc_Expr = scExpr_subset_all,
+                        cell.type.labels = cell_type_labels_subset_all,
+                        cell.state.labels = cell_type_labels_subset_all)
+refPhi_obj_no_adipos = refPrepare(sc_Expr = scExpr_subset_no_adipos,
+                            cell.type.labels = cell_type_labels_subset_no_adipos,
+                            cell.state.labels = cell_type_labels_subset_no_adipos)
 
 # List of datasets
 dataset_list <- c("SchildkrautB", "SchildkrautW", "TCGA", "Mayo", "Tothill", "Yoshihara")
 
-# Run InstaPrism for each dataset
+# Run InstaPrism for each dataset (with adipocytes)
 for (ds in dataset_list) {
-  print(paste0("Running InstaPrism on ", ds))
+  print(paste0("Running InstaPrism (with adipocytes) on ", ds))
   # InstaPrism requires non-log-transformed bulk data, so we will read the pre-transformation Schildkraut data (before doing log10(...+1))
   # The other datasets are microarray and we must read the post-transformation (pseudo "counts") version for those (after doing 2^(...) or 10^(...))
   if (ds == "SchildkrautB" | ds == "SchildkrautW") {
@@ -82,15 +92,29 @@ for (ds in dataset_list) {
   }
   bulk_expr_rownames <- data.frame(bulk_expr[,-1], row.names=bulk_expr[,1]) # Setting column 1 (sample IDs) as the rownames
   assign(paste0("bulk_expr_", ds), t(bulk_expr_rownames)) # Transposing the rows and columns
-  assign(paste0("instaprism_output_", ds),
+  assign(paste0("instaprism_output_", ds, "_with_adipocytes"),
          InstaPrism(bulk_Expr = get(paste0("bulk_expr_", ds)),
-                    refPhi_cs = refPhi_obj))
+                    refPhi_cs = refPhi_obj_all))
 }
 
-# Writing final files
+# Writing final files (with adipocytes)
 for (ds in dataset_list) {
-  write.csv(t((get(paste0("instaprism_output_", ds))@Post.ini.ct@theta)),
-            file.path(export_dir, paste0("instaprism_output_", ds,".csv")),
+  write.csv(t((get(paste0("instaprism_output_", ds, "_with_adipocytes"))@Post.ini.ct@theta)),
+            file.path(export_dir, paste0("instaprism_output_", ds,"_with_adipocytes.csv")),
             row.names=TRUE)
 }
 
+# Run InstaPrism for each dataset (no adipocytes)
+for (ds in dataset_list) {
+  print(paste0("Running InstaPrism (without adipocytes) on ", ds))
+  assign(paste0("instaprism_output_", ds, "_no_adipocytes"),
+         InstaPrism(bulk_Expr = get(paste0("bulk_expr_", ds)),
+                    refPhi_cs = refPhi_obj_no_adipos))
+}
+
+# Writing final files (no adipocytes)
+for (ds in dataset_list) {
+  write.csv(t((get(paste0("instaprism_output_", ds, "_no_adipocytes"))@Post.ini.ct@theta)),
+            file.path(export_dir, paste0("instaprism_output_", ds,"_no_adipocytes.csv")),
+            row.names=TRUE)
+}
