@@ -8,7 +8,7 @@
 # 1) Set up environment
 # ======================
 # Set the working directory
-setwd("/Users/ivicha/Documents/deconvolution_adipocytes")
+setwd("/Users/grace/Library/CloudStorage/OneDrive-TheUniversityofColoradoDenver/greene_lab_projects/hgsoc_adipocyte_deconvolution")
 
 # Load Required Libraries
 library(data.table)
@@ -39,25 +39,65 @@ gene_map <- data.frame(fread(gene_map_file))
 # We expect columns like: ensembl_gene_id, hgnc_symbol, entrezgene_id, etc.
 
 ############################################################
-# 2) Helper Functions
+# 2) Read data
 ############################################################
 
-# read_dataset():
-# Reads a CSV (with ID + gene columns) that has *rows=samples* after we set rownames=ID.
-read_dataset <- function(dataset_name) {
-  fpath <- file.path(bulk_data_dir, paste0(dataset_name, "_filtered_asImported.csv"))
-  df <- data.frame(fread(fpath))
-  rownames(df) <- df$ID
-  df$ID <- NULL
-  return(df)  # row=sample, col=gene
+# We want the log10 transformed version of these datasets as that is what was used in Davidson 2024:
+# (https://github.com/greenelab/hgsc_characterization/blob/master/figure_notebooks/compare_centroids.Rmd)
+# The Schildkraut RNAseq transformed files and the Mayo microarray asImported file
+# are already in this log10 format so we can use them directly.
+# We will import the TCGA, Tothill, and Yoshihara microarray transformed files (in "counts"),
+# then perform log10(...+1) transformation on them.
+dataset_list <- c("SchildkrautB", "SchildkrautW", "TCGA", "Mayo", "Tothill", "Yoshihara")
+
+for (ds in dataset_list) {
+  if (ds == "Mayo") {
+    assign(paste0(ds,"_bulk"),
+           fread(file = (file.path(bulk_data_dir,paste0(ds, "_filtered_asImported.csv"))), header = TRUE, data.table = FALSE))
+  } else {
+    assign(paste0(ds,"_bulk"),
+           fread(file = (file.path(bulk_data_dir,paste0(ds, "_filtered_transformed.csv"))), header = TRUE, data.table = FALSE))
+  }
 }
+
+# Set column 1 (sample IDs) as rownames
+for (ds in dataset_list) {
+  assign(paste0(ds,"_bulk"),
+         data.frame(get(paste0(ds,"_bulk"))[,-1], row.names=get(paste0(ds,"_bulk"))[,1]))
+}
+
+# Use log10(...+1) to transform the TCGA, Tothill, and Yoshihara 
+log10transform <- function(df){
+  transformed <- log10(df + 1)
+  return(transformed)
+}
+
+TCGA_bulk <- log10transform(TCGA_bulk)
+Tothill_bulk <- log10transform(Tothill_bulk)
+Yoshihara_bulk <- log10transform(Yoshihara_bulk)
+# Now all 6 bulk datasets are in a log10 transformed format
+# Rows = samples, columns = genes
+
+# Isolate only the columns (genes) in common between the datasets
+all_genes <- list(colnames(SchildkrautB_bulk), colnames(SchildkrautW_bulk), colnames(TCGA_bulk),
+                  colnames(Mayo_bulk), colnames(Tothill_bulk), colnames(Yoshihara_bulk))
+common_genes <- Reduce(intersect, all_genes)
+
+# Subset each dataset to only include common genes
+for (ds in dataset_list) {
+  assign(paste0(ds,"_subset"),
+         get(paste0(ds,"_bulk"))[,common_genes])
+}
+
+############################################################
+# 3) Helper Functions
+############################################################
 
 # run_kmeans():
 # The matrix is (samples × genes).
 run_kmeans <- function(samp_x_gene) {
   out_df <- data.frame(ID = rownames(samp_x_gene))
   for (k in c(2, 3, 4)) {
-    set.seed(5)
     km <- kmeans(samp_x_gene, centers=k, nstart=25)
     out_df[[paste0("ClusterK", k, "_kmeans")]] <- km$cluster
   }
@@ -75,7 +115,6 @@ run_nmf <- function(samp_x_gene) {
   }
   out_df <- data.frame(ID=rownames(samp_x_gene)) 
   for (k in c(2,3,4)) {
-    set.seed(5)
     nmf_res <- nmf(gene_x_samp, rank=k, nrun=10, .options='v')
     clust <- predict(nmf_res)
     # reorder to match rownames(samp_x_gene)
@@ -142,7 +181,7 @@ combine_clusterings <- function(...) {
 }
 
 ##################################################
-# 3) Main Script
+# 4) Main Script
 ##################################################
 
 dataset_list <- c("SchildkrautB", "SchildkrautW", "TCGA", "Mayo", "Tothill", "Yoshihara")
@@ -153,7 +192,7 @@ for (ds in dataset_list) {
   message("Clustering dataset: ", ds)
   
   # 1) Load => row=sample, col=gene
-  expr_df <- read_dataset(ds)
+  expr_df <- get(paste0(ds,"_subset"))
   
   # 2) K-means
   kmeans_out <- run_kmeans(expr_df)
@@ -180,3 +219,4 @@ final_out <- file.path(clustering_results_dir, "AllDatasets_ClusteringLabels.csv
 write.csv(final_df, final_out, row.names=FALSE)
 
 message("Done! Clustering results written to ", final_out)
+
