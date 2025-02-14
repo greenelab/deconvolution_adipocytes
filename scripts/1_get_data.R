@@ -14,6 +14,11 @@ library(renv)
 # Set the working directory
 setwd("/Users/ivicha/Documents/deconvolution_adipocytes")
 
+# Install curatedOvarianData package
+if (!require("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+BiocManager::install("curatedOvarianData")
+
 # Load Required Libraries
 library(data.table)
 library(dplyr)
@@ -102,20 +107,24 @@ read_format_MA_expr <- function(in_df, metadata_table){
 #    version and the 'transformed' version.
 #########################################################
 
-save_dual_versions <- function(expr_merged, dataset_name, transform_type = c("rnaseq", "microarray")) {
+save_dual_versions <- function(expr_merged, dataset_name, transform_type = c("rnaseq", "microarray2", "microarray10")) {
   expr_merged <- as.data.frame(expr_merged)
   
-  # 1) Save as-imported (raw/log2) version
+  # 1) Save as-imported (raw/log2/log10) version
   save_filtered(expr_merged, dataset_name, suffix = "asImported")
   
   # 2) Create a “transformed” version
   #    For RNA-seq (SchildkrautB/W), original.
-  #    For microarray (TCGA, Mayo, Tothill, Yoshihara), do 2^(...)
+  #    For microarray (TCGA, Mayo, Tothill, Yoshihara), do 10^(...) for Mayo and 2^(...) for the others
   transform_type <- match.arg(transform_type)
   if (transform_type == "rnaseq") {
     expr_transformed <- transform_rnaseq(expr_merged)
-  } else {
-    expr_transformed <- transform_microarray(expr_merged)
+  } 
+  if (transform_type == "microarray2") {
+    expr_transformed <- transform_microarray2(expr_merged)
+  } 
+  if (transform_type == "microarray10") {
+    expr_transformed <- transform_microarray10(expr_merged)
   }
   
   # 3) Save the transformed version
@@ -171,7 +180,7 @@ transform_rnaseq <- function(expr_df) {
 }
 
 # 2) For microarray => 2^(...) to revert from log2
-transform_microarray <- function(expr_df) {
+transform_microarray2 <- function(expr_df) {
   df <- expr_df
   # Again, only exponentiate gene columns
   numeric_cols <- intersect(colnames(df), MAD_genes$hgnc_symbol)
@@ -179,6 +188,20 @@ transform_microarray <- function(expr_df) {
   for (cc in numeric_cols) {
     df[[cc]] <- as.numeric(df[[cc]])
     df[[cc]] <- 2^(df[[cc]])
+  }
+  return(df)
+}
+
+# 2) For microarray => 10^(...) to revert from log10
+# Applies only to Mayo dataset (https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE74357)
+transform_microarray10 <- function(expr_df) {
+  df <- expr_df
+  # Again, only exponentiate gene columns
+  numeric_cols <- intersect(colnames(df), MAD_genes$hgnc_symbol)
+  
+  for (cc in numeric_cols) {
+    df[[cc]] <- as.numeric(df[[cc]])
+    df[[cc]] <- 10^(df[[cc]])
   }
   return(df)
 }
@@ -228,7 +251,7 @@ save_dual_versions(
   transform_type = "rnaseq"
 )
 
-## C) TCGA (Microarray)
+## C) TCGA (Microarray - log2)
 message("Processing TCGA (microarray)")
 data("TCGA_eset", package = "curatedOvarianData")
 tcga_dta <- exprs(TCGA_eset)
@@ -238,10 +261,10 @@ res_tcga <- read_format_MA_expr(tcga_dta, tcga_metadata)
 save_dual_versions(
   expr_merged = res_tcga[[1]],
   dataset_name = "TCGA",
-  transform_type = "microarray"
+  transform_type = "microarray2"
 )
 
-## D) Mayo (Microarray)
+## D) Mayo (Microarray - log10)
 message("Processing Mayo (microarray)")
 obj_names <- load(file.path(proj_dir, "data/mayo/MayoEset.Rda"), envir=environment())
 ExpressionData <- get("mayo.eset")
@@ -252,10 +275,10 @@ res_mayo <- read_format_MA_expr(mayo_dta, mayo_metadata)
 save_dual_versions(
   expr_merged = res_mayo[[1]],
   dataset_name = "Mayo",
-  transform_type = "microarray"
+  transform_type = "microarray10"
 )
 
-## E) Tothill (Microarray)
+## E) Tothill (Microarray - log2)
 message("Processing Tothill (microarray)")
 data("GSE9891_eset", package = "curatedOvarianData")
 tothill_dta <- exprs(GSE9891_eset)
@@ -265,10 +288,10 @@ res_tothill <- read_format_MA_expr(tothill_dta, tothill_metadata)
 save_dual_versions(
   expr_merged = res_tothill[[1]],
   dataset_name = "Tothill",
-  transform_type = "microarray"
+  transform_type = "microarray2"
 )
 
-## F) Yoshihara (Microarray)
+## F) Yoshihara (Microarray - log2)
 message("Processing Yoshihara (microarray)")
 data("GSE32062.GPL6480_eset", package = "curatedOvarianData")
 yoshi_dta <- exprs(GSE32062.GPL6480_eset)
@@ -278,7 +301,7 @@ res_yoshi <- read_format_MA_expr(yoshi_dta, yoshi_metadata)
 save_dual_versions(
   expr_merged = res_yoshi[[1]],
   dataset_name = "Yoshihara",
-  transform_type = "microarray"
+  transform_type = "microarray2"
 )
 
 message("All datasets processed with both asImported & transformed versions!")
