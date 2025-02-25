@@ -1,33 +1,53 @@
-
-##############################
-### The following script creates reference data from single cell and single nucleus RNA seq
-### for use with InstaPrism. 
-##############################
-
-# This script requires data that can be downloaded from
-# (https://github.com/greenelab/deconvolution_pilot/tree/main/data/cell_labels),
-# (https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE217517),
-# and (http://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE176171)
-# Please see README for specific files necessary
+##########################################################################################
+### 3_prepare_reference_data.R
+### 
+### This script creates a single-cell/single-nucleus reference matrix for use as input into
+### InstaPrism. It requires single cell RNA sequencing data of HGSOC
+### (from https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE217517) and cell type labels
+### for those cells (from https://github.com/greenelab/deconvolution_pilot/tree/main/data/cell_labels).
+### It also requires single nucleus RNA sequencing data of adipocytes
+### (from http://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE176171). Please refer to the
+### “Input and output data preparation and organization” subsection of README for specific
+### files necessary. It reads in the HGSOC single cell and adipocyte single nucleus RNA
+### sequencing data and performs some pre-processing on the adipocyte data (removing duplicate
+### samples, removing samples with many mitochondrial gene reads, and using Seurat to remove
+### low-quality nuclei, empty droplets, and nuclei doublets/multiplets). It then combines the
+### single cell and single nucleus data to generate an expression matrix where each row
+### corresponds to a gene (GeneCards symbols) and each column corresponds to a sample (each
+### assigned a unique numerical ID). It also generates a cell type file which serves as a key,
+### and associates each sample ID to its cell type. 
+##########################################################################################
 
 # These are very large files that take up a lot of memory - clear R's memory to make room
 rm(list = ls())
 gc()
 
-# # Set the working directory
-# setwd("projects/gakatsu@xsede.org/hgsoc_adipocyte_deconvolution")
-
-# Set directory for location of reference data
-reference_data_dir <- file.path("/projects/gakatsu@xsede.org/hgsoc_adipocyte_deconvolution/reference_data")
+# Load environment
+renv::load()
 
 # Load required libraries
 library(dplyr)
 library(Matrix)
 library(data.table)
+library(scuttle)
+library(here)
+library(Seurat)
 
-##############################
-### 1) Read the scRNAseq reference datasets and associate each cell with a pre-identified cell state
-##############################
+# Set base directories
+# Be sure to open this script along with a corresponding project
+# that is located in the same directory as the scripts and the 
+# input_data folder and enclosed files.
+input_data <- file.path(here(), "input_data")
+output_data <- file.path(here(), "output_data")
+reference_data_dir <- file.path(output_data,"sc_sn_reference_data")
+
+# Ensure reference_data_dir directory exists
+dir.create(reference_data_dir, recursive = TRUE, showWarnings = FALSE)
+
+##########################################################
+# 1) Read the scRNAseq reference datasets and associate
+#    each cell with a pre-identified cell state
+##########################################################
 
 # The eight different datasets have numerous identifying numbers/names, for simplicity we will use rep1-rep8.
 # Corresponding identifiers can be verified at (https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE217517)
@@ -39,29 +59,30 @@ identifiers <-
 
 # Create functions for reading the files
 read_matrix <- function(n) {
-  matrix <- Matrix::readMM(file.path(reference_data_dir, paste0(identifiers[n,2],"_single_cell_matrix_", identifiers[n,3], ".mtx")))
+  matrix <- Matrix::readMM(file.path(input_data, paste0(identifiers[n,2],"_single_cell_matrix_", identifiers[n,3], ".mtx")))
   return(matrix)
 }
 read_barcodes <- function(n){
-  df <- fread(file = (file.path(reference_data_dir, paste0(identifiers[n,2], "_single_cell_barcodes_", identifiers[n,3], ".tsv"))),
+  df <- fread(file = (file.path(input_data, paste0(identifiers[n,2], "_single_cell_barcodes_", identifiers[n,3], ".tsv"))),
               header = FALSE,
               data.table = FALSE)
   return(df)
 }
 read_features <- function(n){
-  df <- fread(file = (file.path(reference_data_dir, paste0(identifiers[n,2], "_single_cell_features_", identifiers[n,3], ".tsv"))),
+  df <- fread(file = (file.path(input_data, paste0(identifiers[n,2], "_single_cell_features_", identifiers[n,3], ".tsv"))),
               header = FALSE,
               data.table = FALSE)
   return(df)
 }
 read_labels <- function(n){
-  df <- read.delim(file = (file.path(reference_data_dir, paste0(identifiers[n,3], "_labels.txt"))),
+  df <- read.delim(file = (file.path(input_data, paste0(identifiers[n,3], "_labels.txt"))),
                    header = TRUE)
   return(df)
 }
 
 # Reading the files
 for (n in c(seq.int(1,8))) {
+  print(paste0("reading scRNAseq files, rep ",n))
   assign(paste0("rep",n,"_sc_matrix"), read_matrix(n))
   assign(paste0("rep",n,"_sc_barcodes"), read_barcodes(n))
   assign(paste0("rep",n,"_sc_features"), read_features(n))
@@ -111,9 +132,13 @@ for (n in c(seq.int(1,8))) {
 rm(rep1_sc_matrix, rep2_sc_matrix, rep3_sc_matrix, rep4_sc_matrix, rep5_sc_matrix, rep6_sc_matrix, rep7_sc_matrix, rep8_sc_matrix)
 gc()
 
-##############################
-### 2) Create the information required to input into InstaPrism
-##############################
+
+##########################################################
+# 2) For the scRNA seq data, filter out any duplicate samples
+#    within reps then create a large matrix with rows = genes
+#    and columns = samples. Also create a key that associates
+#    each sample ID with its cell type.
+##########################################################
 
 # First we will create dataframes that associate the overlapping cell barcodes with their cell type labels
 for (n in c(seq.int(1,8))) {
@@ -125,6 +150,40 @@ for (n in c(seq.int(1,8))) {
 # Removing the sc_labels from R's memory to save space
 rm(rep1_sc_labels, rep2_sc_labels, rep3_sc_labels, rep4_sc_labels, rep5_sc_labels, rep6_sc_labels, rep7_sc_labels, rep8_sc_labels)
 gc()
+
+# Now let's remove any duplicate samples in both the _sc_overlap_cells_labeled cell type keys
+# and the _sc_matrix_subset expression matrices.
+for (n in c(1:8)){
+  cell_types <- get(paste0("rep",n,"_sc_overlap_cells_labeled"))
+  matrix <- get(paste0("rep",n,"_sc_matrix_subset"))
+  
+  # Ensuring that the number of samples is the same
+  if(nrow(cell_types) != ncol(matrix)){
+    stop(paste0("Warning! Number of samples in scRNAseq data rep ",n," do not match up between the cell type labels and the expression matrix."))
+  }
+  
+  # Identifying duplicate sample barcode indices
+  indices <- which(duplicated(cell_types$Barcode))
+  print(paste0("Identified ",length(indices)," duplicate samples in scRNAseq data rep ",n,", of ",nrow(cell_types)," total samples."))
+  if (length(indices) == 0){
+    next
+  }
+
+  # Removing any duplicate samples
+  cell_types_filt <- cell_types[-indices,]
+  matrix_filt <- matrix[,-indices]
+
+  # Ensuring that the remaining number of samples matchs up between filtered cell type key and filtered matrix
+  if(nrow(cell_types_filt) != ncol(matrix_filt)){
+    stop("Warning! Number of samples does not match up between cell type labels and expression matrix for scRNAseq data rep ",n," after removal of duplicate samples.")
+  }
+  
+  # Assign back to original object names
+  assign(paste0("rep",n,"_sc_overlap_cells_labeled"),
+         cell_types_filt)
+  assign(paste0("rep",n,"_sc_matrix_subset"),
+         matrix_filt)
+}
 
 # Then we will create combined key that aligns cell barcodes with cell type
 all_sc_overlap_cells_labeled <- rbind(rep1_sc_overlap_cells_labeled,
@@ -151,7 +210,7 @@ gc()
 # identical between reps so that the matrices can be accurately bound together horizontally.
 for (n in c(seq.int(2,8))) {
   if(!identical(get(paste0("rep",n,"_sc_features")),rep1_sc_features)){
-    stop("Warning! Row names (genes) are not identical between reps.")
+    stop("Warning! Row names (genes) are not identical between scRNAseq reps.")
   }
 }
 
@@ -181,9 +240,10 @@ rm(rep1_sc_matrix_subset,
    rep8_sc_matrix_subset)
 gc()
 
-##############################
-### 3) Read the adipose tissue snRNAseq data and combine the files together
-##############################
+##########################################################
+# 3) Read the adipose tissue snRNAseq data, subset to only
+#    include genes in common with scRNAseq data
+##########################################################
 
 # Read the files
 adipose_file_names <- c("GSM5359325_Hs_OAT_01-1.dge.tsv",
@@ -200,115 +260,121 @@ adipose_file_names <- c("GSM5359325_Hs_OAT_01-1.dge.tsv",
                         "GSM5359336_Hs_SAT_255-1.dge.tsv",
                         "GSM5359337_Hs_SAT_256-1.dge.tsv")
 
-# Here is a function to read these large tsv files as sparse matrices (dgCMatrix)
-## SOURCE: "readSparseCounts" package by Aaron Lun (https://rdrr.io/bioc/scuttle/man/readSparseCounts.html)
-# Package was not available for direct installation (not compatible with R version)
-readSparseCounts <- function(file, sep="\t", quote=NULL, comment.char="", row.names=TRUE, col.names=TRUE,
-                             ignore.row=0L, skip.row=0L, ignore.col=0L, skip.col=0L, chunk=1000L) {
-  if (is.character(file)) {
-    fhandle <- file(file, open='r')
-    on.exit(close(fhandle))
-  } else if (is(file, "connection")) {
-    fhandle <- file
-    if (!isOpen(fhandle, "read")) {
-      stop("'file' should be a connection in read mode")
-    }
-  } else {
-    stop("'file' should be a connection or a character string")
-  }
-
-  # Scanning through rows.
-  if (ignore.row) {
-    readLines(fhandle, n=ignore.row)
-  }
-  if (col.names) {
-    cell.names <- scan(fhandle, sep=sep, nlines=1, what=character(), quote=quote, comment.char=comment.char, quiet=TRUE)
-  } else {
-    cell.names <- NULL
-  }
-  if (skip.row) {
-    readLines(fhandle, n=skip.row)
-  }
-
-  # Figuring out how to extract the columns.
-  first <- scan(fhandle, sep=sep, quote=quote, what=character(), comment.char=comment.char, nlines=1L, quiet=TRUE)
-
-  nentries <- length(first)
-  what <- vector("list", nentries)
-  if (row.names) {
-    row.name.col <- ignore.col + 1L
-    what[[row.name.col]] <- "character"
-    ignore.col <- row.name.col
-  }
-
-  skip.col <- skip.col + ignore.col
-  ncells <- nentries - skip.col
-  cell.cols <- skip.col + seq_len(ncells)
-  what[cell.cols] <- 0
-
-  # Processing the first element.
-  gene.names <- NULL
-  if (row.names) {
-    gene.names <- first[[row.name.col]]
-  }
-
-  output <- list(as(rbind(as.double(first[cell.cols])), "dgCMatrix"))
-  it <- 2L
-
-  # Reading it in, chunk by chunk (see behavior of nmax= when what= is a list).
-  repeat {
-    current <- scan(fhandle, what=what, sep=sep, quote=quote, comment.char=comment.char, nmax=chunk, quiet=TRUE)
-    if (row.names) {
-      gene.names <- c(gene.names, current[[row.name.col]])
-    }
-    output[[it]] <- as(do.call(cbind, current[cell.cols]), "dgCMatrix")
-    it <- it + 1L
-    if (chunk<0 || length(current[[1]]) < chunk) {
-      break
-    }
-  }
-  output <- do.call(rbind, output)
-
-  # Adding row and column names, if available.
-  if (row.names) {
-    rownames(output) <- gene.names
-  }
-  if (col.names) {
-    colnames(output) <- tail(cell.names, ncells)
-  }
-  return(output)
-}
-
-# Use readSparseCounts to read the files
+# Use readSparseCounts from "scuttle" package to read these large files
 for (file in adipose_file_names) {
-  print(paste0("reading ",file))
+  print(paste0("reading ",file," (adipose",which(adipose_file_names == file),")"))
   assign(paste0("adipose",(which(adipose_file_names == file))),
-         readSparseCounts(file.path(reference_data_dir, file), sep="\t", quote=NULL, comment.char="", row.names=TRUE,
+         readSparseCounts(file.path(input_data, file), sep="\t", quote=NULL, comment.char="", row.names=TRUE,
                           col.names=TRUE, ignore.row=0L, skip.row=0L, ignore.col=0L, skip.col=0L, chunk=1000L))
 }
 
-# Let's find the row names (genes) that are shared in common between files so that the
-# adipose matrices can be accurately bound together horizontally.
+# Let's find the row names (genes) that are shared in common between adipose files
 adipose_genes <- list(rownames(adipose1), rownames(adipose2), rownames(adipose3), rownames(adipose4), rownames(adipose5),
                       rownames(adipose6), rownames(adipose7), rownames(adipose8), rownames(adipose9),
                       rownames(adipose10), rownames(adipose11), rownames(adipose12), rownames(adipose13))
 
 adipose_common_genes <- Reduce(intersect, adipose_genes)
 
-# Now we will find the row names (genes) in common between the the single cell and the adipose data.
+# Now we will find the genes (as GeneCards symbols) in common between the the single cell and the adipose data.
 all_overlap_genes <- intersect(rep1_sc_features[,2], adipose_common_genes)
+print(paste0("Identified ",length(all_overlap_genes)," total genes in common between sc and sn RNAseq data."))
 
 # Now we will subset each adipose matrix to only include common genes
 for (n in c(seq.int(1,13))) {
   assign(paste0("adipose",n,"_subset"),
-         get(paste0("adipose",n))[all_overlap_genes, ])
+         get(paste0("adipose",n))[all_overlap_genes,])
 }
 
 # Removing the large matrices from R's memory to save space
 rm(adipose1, adipose2, adipose3, adipose4, adipose5, adipose6, adipose7, adipose8, adipose9, adipose10, adipose11, adipose12, adipose13)
 gc()
 
-# Let's ensure that the row names (genes), are now identical between adipose
+##########################################################
+# 4) Preprocessing adipose snRNAseq data: remove duplicates,
+#    remove nuclei with high mitochondrial gene read levels,
+#    remove low-quality cells, empty droplets, and cell doublets/
+#    multiplets using Seurat. Then, combine all 13 processed
+#    samples together into one large gene expression matrix.
+##########################################################
+
+# Remove any duplicate samples (columns) from the expression matrices
+for (n in c(seq.int(1,13))) {
+  matrix <- get(paste0("adipose",n,"_subset"))
+  indices <- which(duplicated(colnames(matrix)))
+  print(paste0("Identified ",length(indices)," duplicate samples in adipose",n,", of ",ncol(matrix)," total samples."))
+  if (length(indices) == 0){
+    next
+  }
+  filt_matrix <- matrix[,-indices]
+  assign(paste0("adipose",n,"_subset"), filt_matrix)
+}
+
+# Removing the large objects from R's memory to save space
+rm(matrix, indices)
+gc()
+
+# As these are nuclei, there should not be any mitochondrial gene RNAs present.
+# However, nearly all of these samples have some amount of mitochondrial gene RNA.
+# Therefore we will filter out any samples with >25 total mitochondrial gene reads,
+# as well as any sample with >2.5% of all reads coming from mitochondrial genes.
+
+# Removing samples with >25 total mitochondrial gene reads
+for (n in c(seq.int(1,13))) {
+  # Find mitochondrial genes (gene names starting with "MT-")
+  mito_gene_indices <- grep("MT-", rownames(get(paste0("adipose",n,"_subset"))))
+  mito_genes <- get(paste0("adipose",n,"_subset"))[mito_gene_indices,]
+  
+  # Select the samples (columns) that have >25 reads of any mitochondrial genes
+  mito_samples <- which(colSums(mito_genes) > 25)
+  print(paste0("Identified ",length(mito_samples)," samples with >25 mitochondrial gene reads in adipose",
+               n,"_subset, of ",ncol(mito_genes)," total samples."))
+  
+  if(length(mito_samples) != 0){
+    # Remove the identified columns from the matrix
+    assign(paste0("adipose",n,"_subset"),
+           get(paste0("adipose",n,"_subset"))[,-mito_samples])
+    }
+}
+
+# Removing samples with >2.5% of all reads coming from mitochondrial genes
+for (n in c(seq.int(1,13))) {
+  # Find mitochondrial genes (gene names starting with "MT-")
+  mito_gene_indices <- grep("MT-", rownames(get(paste0("adipose",n,"_subset"))))
+  
+  # Find the sum of all mitochondrial reads and the sum of all gene reads,
+  # then divide to find the proportion
+  mito_genes_sum <- as.vector(colSums(get(paste0("adipose",n,"_subset"))[mito_gene_indices,]))
+  all_genes_sum <- as.vector(colSums(get(paste0("adipose",n,"_subset"))))
+  proportions <- mito_genes_sum / all_genes_sum
+  # Select the samples which have >2.5% of all reads coming from mitochondrial genes
+  indices <- which(proportions > 0.025)
+  print(paste0("Identified ",length(indices)," samples with >2.5% of all reads coming from mitochondrial genes in adipose",
+               n,"_subset, of ",length(mito_genes_sum)," total samples."))
+  
+  if(length(indices) != 0){
+    # Remove the identified columns from the matrix
+    assign(paste0("adipose",n,"_subset"),
+           get(paste0("adipose",n,"_subset"))[,-indices])
+  }
+}
+
+# Now we will use the Seurat package to remove low-quality nuclei, empty droplets, and nuclei doublets/multiplets.
+# We will filter out samples that express fewer than 250 unique genes (likely low quality), 
+# as well as samples that express greater than 3000 unique genes (likely doublet/multiplet).
+for (n in c(seq.int(1,13))) {
+  obj <- CreateSeuratObject(counts = get(paste0("adipose",n,"_subset")))
+  low_genes <- which(obj$nFeature_RNA < 250)
+  high_genes <- which(obj$nFeature_RNA > 3000)
+  print(paste0("Identified ",length(low_genes)," samples with <250 unique genes expressed and ",length(high_genes),
+               " samples with >3000 unique genes expressed in adipose",n,"_subset, of ",ncol(obj)," total samples."))
+  remove <- c(low_genes, high_genes)
+  if(length(remove) != 0){
+    assign(paste0("adipose",n,"_subset"),
+           get(paste0("adipose",n,"_subset"))[,-remove])
+  }
+}
+
+# Let's ensure that the row names (genes), are identical between adipose
 # samples so that the matrices can be accurately bound together horizontally.
 for (n in c(seq.int(2,13))) {
   if(!identical(rownames(get(paste0("adipose",n,"_subset"))),rownames(adipose1_subset))){
@@ -327,9 +393,9 @@ rm(adipose1_subset, adipose2_subset, adipose3_subset, adipose4_subset, adipose5_
    adipose10_subset, adipose11_subset, adipose12_subset, adipose13_subset)
 gc()
 
-##############################
-### 4) Combine the scRNAseq data and the adipose snRNAseq data
-##############################
+##########################################################
+# 5) Combine the scRNAseq data and the adipose snRNAseq data
+##########################################################
 
 # Subsetting the scRNAseq data to only contain overlapping genes with the snRNAseq data
 all_sc_expr_overlap <- (all_sc_expr)[all_overlap_genes, ]
@@ -362,21 +428,16 @@ all_cell_type_final <- rbind(all_sc_overlap_cells_labeled, adipocyte_cells_label
 rm(all_sc_overlap_cells_labeled, adipocyte_cells_labeled)
 gc()
 
-# Ensuring that the cell barcodes match up between all_expr_final and all_cell_type_final
-if(!identical(colnames(all_expr_final),all_cell_type_final[,1])){
-  stop("Warning! Cell barcodes do not match up between all_expr_final and all_cell_type_final.")
-}
-
-# Replacing the cell barcodes with a unique ID number
+# Replacing all cell barcodes with a unique numeric ID number
 all_cell_type_final <- all_cell_type_final %>%
   mutate(cell_id = 1:nrow(all_cell_type_final))
 
 colnames(all_expr_final) <- 1:ncol(all_expr_final)
 
-# Writing final files
-writeMM(all_expr_final, file.path(reference_data_dir, "000combined_reference_expr_final.csv"), row.names=TRUE, col.names=TRUE)
-write.csv(colnames(all_expr_final), file.path(reference_data_dir, "000combined_reference_expr_final_colnames.csv"))
-write.csv(rownames(all_expr_final), file.path(reference_data_dir, "000combined_reference_expr_final_rownames.csv"))
-write.csv(all_cell_type_final, file.path(reference_data_dir, "000combined_reference_cell_types_final.csv"), row.names=FALSE)
+##########################################################
+# 6) Write final files
+##########################################################
 
-
+writeMM(all_expr_final, file.path(reference_data_dir, "reference_expr_final.csv"))
+write.csv(rownames(all_expr_final), file.path(reference_data_dir, "reference_expr_final_genes.csv"))
+write.csv(all_cell_type_final, file.path(reference_data_dir, "reference_cell_types_final.csv"), row.names=FALSE)
