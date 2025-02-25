@@ -27,85 +27,85 @@ This script creates several figures to visualize the deconvolution results gener
 # 3) Input and output data preparation and organization:
 Prior to running these scripts, please ensure that the below raw data files have been downloaded and are present in a folder entitled “input_data” inside the same project and directory as the scripts. (The results will be created and stored in another folder inside the same directory entitled “output_data”.) Sample directory contents:
 
-![Screenshot 2025-02-25 at 1 55 07 PM](https://github.com/user-attachments/assets/e1564299-1f62-4809-a346-877df973de34)
+![Screenshot 2025-02-25 at 2 28 25 PM](https://github.com/user-attachments/assets/b44cfc2a-8242-4f5e-ba2b-f75ff6712de9)
 ## SchildkrautB, SchildkrautW, and reference gene list:
 ### From https://github.com/greenelab/hgsc_characterization:
-/reference_data/ensembl_hgnc_entrez.tsv
-/reference_data/main_AA_metadata_table.tsv
-/reference_data/main_white_metadata_table.tsv
-/data/way_pipeline_results_10removed_NeoRemoved_inclWhites/1.DataInclusion-Data-Genes/GlobalMAD_genelist.csv
-/data/way_pipeline_results_10removed_NeoRemoved_inclWhites/2.Clustering_DiffExprs-Tables-ClusterMembership/FullClusterMembership.csv
+- /reference_data/ensembl_hgnc_entrez.tsv
+- /reference_data/main_AA_metadata_table.tsv
+- /reference_data/main_white_metadata_table.tsv
+- /data/way_pipeline_results_10removed_NeoRemoved_inclWhites/1.DataInclusion-Data-Genes/GlobalMAD_genelist.csv
+- /data/way_pipeline_results_10removed_NeoRemoved_inclWhites/2.Clustering_DiffExprs-Tables-ClusterMembership/FullClusterMembership.csv
 ### From https://github.com/nrosed/hgsc_characterization/tree/master: 
-/data/rna_seq_pilot_and_new/salmon_normalized_filtered_for_way_pipeline.tsv
-/data/rna_seq_whites/salmon_normalized_filtered_for_way_pipeline_whites.tsv
+- /data/rna_seq_pilot_and_new/salmon_normalized_filtered_for_way_pipeline.tsv
+- /data/rna_seq_whites/salmon_normalized_filtered_for_way_pipeline_whites.tsv
 ## Single cell RNA sequencing data and cell type IDs:
 ### From https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE217517:
 #### GSM6720925 Dissociated cells, single cell sequenced, rep1
-GSM6720925_single_cell_barcodes_2251.tsv.gz
-GSM6720925_single_cell_features_2251.tsv.gz
-GSM6720925_single_cell_matrix_2251.mtx.gz
+- GSM6720925_single_cell_barcodes_2251.tsv.gz
+- GSM6720925_single_cell_features_2251.tsv.gz
+- GSM6720925_single_cell_matrix_2251.mtx.gz
 #### GSM6720926 Dissociated cells, single cell sequenced, rep2
-GSM6720926_single_cell_barcodes_2267.tsv.gz
-GSM6720926_single_cell_features_2267.tsv.gz
-GSM6720926_single_cell_matrix_2267.mtx.gz
+- GSM6720926_single_cell_barcodes_2267.tsv.gz
+- GSM6720926_single_cell_features_2267.tsv.gz
+- GSM6720926_single_cell_matrix_2267.mtx.gz
 #### GSM6720927 Dissociated cells, single cell sequenced, rep3
-GSM6720927_single_cell_barcodes_2283.tsv.gz
-GSM6720927_single_cell_features_2283.tsv.gz
-GSM6720927_single_cell_matrix_2283.mtx.gz
+- GSM6720927_single_cell_barcodes_2283.tsv.gz
+- GSM6720927_single_cell_features_2283.tsv.gz
+- GSM6720927_single_cell_matrix_2283.mtx.gz
 #### GSM6720928 Dissociated cells, single cell sequenced, rep4
-GSM6720928_single_cell_barcodes_2293.tsv.gz
-GSM6720928_single_cell_features_2293.tsv.gz
-GSM6720928_single_cell_matrix_2293.mtx.gz
+- GSM6720928_single_cell_barcodes_2293.tsv.gz
+- GSM6720928_single_cell_features_2293.tsv.gz
+- GSM6720928_single_cell_matrix_2293.mtx.gz
 #### GSM6720929 Dissociated cells, single cell sequenced, rep5
-GSM6720929_single_cell_barcodes_2380.tsv.gz
-GSM6720929_single_cell_features_2380.tsv.gz
-GSM6720929_single_cell_matrix_2380.mtx.gz
+- GSM6720929_single_cell_barcodes_2380.tsv.gz
+- GSM6720929_single_cell_features_2380.tsv.gz
+- GSM6720929_single_cell_matrix_2380.mtx.gz
 #### GSM6720930 Dissociated cells, single cell sequenced, rep6
-GSM6720930_single_cell_barcodes_2428.tsv.gz
-GSM6720930_single_cell_features_2428.tsv.gz
-GSM6720930_single_cell_matrix_2428.mtx.gz
+- GSM6720930_single_cell_barcodes_2428.tsv.gz
+- GSM6720930_single_cell_features_2428.tsv.gz
+- GSM6720930_single_cell_matrix_2428.mtx.gz
 #### GSM6720931 Dissociated cells, single cell sequenced, rep7
-GSM6720931_single_cell_barcodes_2467.tsv.gz
-GSM6720931_single_cell_features_2467.tsv.gz
-GSM6720931_single_cell_matrix_2467.mtx.gz
+- GSM6720931_single_cell_barcodes_2467.tsv.gz
+- GSM6720931_single_cell_features_2467.tsv.gz
+- GSM6720931_single_cell_matrix_2467.mtx.gz
 #### GSM6720932 Dissociated cells, single cell sequenced, rep8
-GSM6720932_single_cell_barcodes_2497.tsv.gz
-GSM6720932_single_cell_features_2497.tsv.gz
-GSM6720932_single_cell_matrix_2497.mtx.gz
+- GSM6720932_single_cell_barcodes_2497.tsv.gz
+- GSM6720932_single_cell_features_2497.tsv.gz
+- GSM6720932_single_cell_matrix_2497.mtx.gz
 ### From https://github.com/greenelab/deconvolution_pilot/tree/main/data/cell_labels:
-2251_labels.txt
-2267_labels.txt
-2283_labels.txt
-2293_labels.txt
-2380_labels.txt
-2428_labels.txt
-2467_labels.txt
-2497_labels.txt
+- 2251_labels.txt
+- 2267_labels.txt
+- 2283_labels.txt
+- 2293_labels.txt
+- 2380_labels.txt
+- 2428_labels.txt
+- 2467_labels.txt
+- 2497_labels.txt
 ## Single nucleus adipocyte reference data:
 ### From http://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE176171:
 #### GSM5359325 Human visceral white adipose 01-1
-GSM5359325_Hs_OAT_01-1.dge.tsv.gz
+- GSM5359325_Hs_OAT_01-1.dge.tsv.gz
 #### GSM5359326 Human visceral white adipose 01-2
-GSM5359326_Hs_OAT_01-2.dge.tsv.gz
+- GSM5359326_Hs_OAT_01-2.dge.tsv.gz
 #### GSM5359327 Human visceral white adipose 253-1
-GSM5359327_Hs_OAT_253-1.dge.tsv.gz
+- GSM5359327_Hs_OAT_253-1.dge.tsv.gz
 #### GSM5359328 Human visceral white adipose 254-1
-GSM5359328_Hs_OAT_254-1.dge.tsv.gz
+- GSM5359328_Hs_OAT_254-1.dge.tsv.gz
 #### GSM5359329 Human visceral white adipose 255-1
-GSM5359329_Hs_OAT_255-1.dge.tsv.gz
+- GSM5359329_Hs_OAT_255-1.dge.tsv.gz
 #### GSM5359330 Human visceral white adipose 256-1
-GSM5359330_Hs_OAT_256-1.dge.tsv.gz
+- GSM5359330_Hs_OAT_256-1.dge.tsv.gz
 #### GSM5359331 Human subcutaneous white adipose 01-1
-GSM5359331_Hs_SAT_01-1.dge.tsv.gz
+- GSM5359331_Hs_SAT_01-1.dge.tsv.gz
 #### GSM5359332 Human subcutaneous white adipose 02-1
-GSM5359332_Hs_SAT_02-1.dge.tsv.gz
+- GSM5359332_Hs_SAT_02-1.dge.tsv.gz
 #### GSM5359333 Human subcutaneous white adipose 04-1
-GSM5359333_Hs_SAT_04-1.dge.tsv.gz
+- GSM5359333_Hs_SAT_04-1.dge.tsv.gz
 #### GSM5359334 Human subcutaneous white adipose 253-1
-GSM5359334_Hs_SAT_253-1.dge.tsv.gz
+- GSM5359334_Hs_SAT_253-1.dge.tsv.gz
 #### GSM5359335 Human subcutaneous white adipose 254-1
-GSM5359335_Hs_SAT_254-1.dge.tsv.gz
+- GSM5359335_Hs_SAT_254-1.dge.tsv.gz
 #### GSM5359336 Human subcutaneous white adipose 255-1
-GSM5359336_Hs_SAT_255-1.dge.tsv.gz
+- GSM5359336_Hs_SAT_255-1.dge.tsv.gz
 #### GSM5359337 Human subcutaneous white adipose 256-1
-GSM5359337_Hs_SAT_256-1.dge.tsv.gz
+- GSM5359337_Hs_SAT_256-1.dge.tsv.gz
