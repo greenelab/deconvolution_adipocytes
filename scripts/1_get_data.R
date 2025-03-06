@@ -1,54 +1,55 @@
-#########################################
-# 1_get_data.R
-# Saves data both 'as is' & in linear/counted,
-# ensuring final CSV only includes ID + gene columns
-#########################################
+##########################################################################################
+### 1_get_data.R
+### 
+### This script reads the bulk RNA sequencing and microarray datasets and filters them
+### to only include genes present in one common gene mapping list. It transforms the
+### microarray data using 2^(***) to match the scale of the bulk RNA sequencing data values
+### – this is used for InstaPrism deconvolution. It also transforms the bulk RNA sequencing
+### data using log10(***+1) to match the scale of the microarray data – this is used for
+### clustering. All of these matrices are saved in a uniform format containing on sample
+### ID (rows) and genes (columns); file names are appended with either “asImported” or
+### “transformed.” It also saves any metadata information (ex. prior clustering) about
+### the samples in a separate file for reference.
+##########################################################################################
 
-# Load the renv library
+# These are large files that take up a lot of memory - clear R's memory to make room
+rm(list = ls())
+gc()
+
+# Load the renv library from the lockfile
 if (!requireNamespace("renv", quietly = TRUE)) {
   install.packages("renv")  # Install renv if not already installed
 }
-
 library(renv)
-
-# Set the working directory
-setwd("/Users/ivicha/Documents/deconvolution_adipocytes")
+renv::init()
+renv::restore()
 
 # Load Required Libraries
 library(data.table)
 library(dplyr)
 library(Biobase)  # for ExpressionSet access
 library(curatedOvarianData)
+library(here)
 
-# Set Base Directories
-proj_dir <- file.path(getwd(), "prior_data")
-bulk_data_dir <- file.path(getwd(), "data/bulks")
+# Set base directories
+# Be sure to open this script along with a corresponding project
+# that is located in the same directory as the scripts and the 
+# input_data folder and enclosed files.
+input_data <- file.path(here(), "input_data")
+output_data <- file.path(here(), "output_data/bulk_datasets")
 
-# Ensure directories exist
-dir.create(proj_dir, recursive = TRUE, showWarnings = FALSE)
-dir.create(bulk_data_dir, recursive = TRUE, showWarnings = FALSE)
-
-# Load Gene Mapping File
-gene_map_file <- file.path(proj_dir, "reference_data/ensembl_hgnc_entrez.tsv")
-if (file.exists(gene_map_file)) {
-  gene_map <- data.frame(fread(gene_map_file))
-} else {
-  stop("Gene mapping file not found!")
-}
+# Ensure output_data directory exists
+dir.create(output_data, recursive = TRUE, showWarnings = FALSE)
 
 # Load Gene List
-MAD_genes_file <- file.path(
-  proj_dir,
-  "data/way_pipeline_results_10removed_NeoRemoved_inclWhites/1.DataInclusion-Data-Genes/GlobalMAD_genelist.csv"
-)
-MAD_genes <- data.frame(fread(MAD_genes_file))
+MAD_genes <- data.frame(fread(file.path(input_data,"GlobalMAD_genelist.csv")))
 colnames(MAD_genes) <- "hgnc_symbol"
 
-#######################################
-# 1) Helper reading/merging functions #
-#######################################
+##########################################################
+# 1) Helper reading/merging functions 
+##########################################################
 
-# read rnaseq data from file
+# read Schildkraut data from file
 read_format_expr <- function(in_file, metadata_table){
   # 1) Read file with fill=TRUE to handle irregular columns
   rnaseq_expr_df <- data.frame(fread(in_file, fill = TRUE))
@@ -77,8 +78,8 @@ read_format_expr <- function(in_file, metadata_table){
   return(list(full_df, gene_ids))
 }
 
-# read microarray data from an in_df object
-read_format_MA_expr <- function(in_df, metadata_table){
+# read curatedOvarianData data from an in_df object
+read_format_cOD_expr <- function(in_df, metadata_table){
   rnaseq_expr_df <- as.data.frame(in_df)  # ensure data.frame
   gene_ids <- rownames(rnaseq_expr_df)
   sample_ids <- colnames(rnaseq_expr_df)
@@ -96,11 +97,11 @@ read_format_MA_expr <- function(in_df, metadata_table){
   return(list(full_df, gene_ids))
 }
 
-#########################################################
+##########################################################
 # 2) Filter to MAD_genes & write out as CSV plus metadata
-#    We'll define a function that saves both the 'as is'
-#    version and the 'transformed' version.
-#########################################################
+#    We'll define a function that saves both the 'as
+#    imported' version and the 'transformed' version.
+##########################################################
 
 save_dual_versions <- function(expr_merged, dataset_name, transform_type = c("rnaseq", "microarray")) {
   expr_merged <- as.data.frame(expr_merged)
@@ -109,18 +110,21 @@ save_dual_versions <- function(expr_merged, dataset_name, transform_type = c("rn
   save_filtered(expr_merged, dataset_name, suffix = "asImported")
   
   # 2) Create a “transformed” version
-  #    For RNA-seq (SchildkrautB/W), original.
-  #    For microarray (TCGA, Mayo, Tothill, Yoshihara), do 2^(...)
+  #    For bulk RNA seq (SchildkrautB, SchildkrautW, TCGA_bulk), log10(...+1)
+  #    For microarray (TCGA_microarray, Tothill, Yoshihara), do 2^(...)
   transform_type <- match.arg(transform_type)
   if (transform_type == "rnaseq") {
     expr_transformed <- transform_rnaseq(expr_merged)
-  } else {
+    
+    # 3) Save the transformed version
+    save_filtered(expr_transformed, dataset_name, suffix = "transformed")
+  } 
+  if (transform_type == "microarray") {
     expr_transformed <- transform_microarray(expr_merged)
-  }
   
   # 3) Save the transformed version
   save_filtered(expr_transformed, dataset_name, suffix = "transformed")
-}
+}}
 
 # This sub-function saves ONLY ID + gene columns in the expression CSV,
 # and everything else in a separate metadata file.
@@ -132,10 +136,9 @@ save_filtered <- function(expr_merged, dataset_name, suffix) {
   final_order <- c("ID", valid_genes)
   final_order <- intersect(final_order, colnames(expr_merged))
   expr_filtered <- expr_merged[, final_order, drop = FALSE]
-  
+
   # Write expression CSV
-  expr_output_file <- file.path(
-    bulk_data_dir,
+  expr_output_file <- file.path(output_data,
     paste0(dataset_name, "_filtered_", suffix, ".csv")
   )
   write.csv(expr_filtered, expr_output_file, row.names = FALSE)
@@ -144,22 +147,21 @@ save_filtered <- function(expr_merged, dataset_name, suffix) {
   meta_cols <- setdiff(colnames(expr_merged), final_order)
   metadata_only <- expr_merged[, meta_cols, drop = FALSE]
   
-  meta_output_file <- file.path(
-    bulk_data_dir,
+  meta_output_file <- file.path(output_data,
     paste0(dataset_name, "_metadata_", suffix, ".csv")
   )
   write.csv(metadata_only, meta_output_file, row.names = FALSE)
 }
 
 ##########################################
-# Helper transformations for each data type #
+# Helper transformations for each data type
 ##########################################
 
-# 1) For RNA-seq (SchildkrautB/W) => log10(... + 1)
+# 1) For RNA-seq => log10(... + 1)
 transform_rnaseq <- function(expr_df) {
   df <- expr_df
   # We'll define 'ID' as non-gene. 
-  # Everything else that is also in 'MAD_genes' is numeric. 
+  # Every other column that is also in 'MAD_genes' is numeric. 
   # So we can just do:
   numeric_cols <- intersect(colnames(df), MAD_genes$hgnc_symbol)
   
@@ -183,14 +185,12 @@ transform_microarray <- function(expr_df) {
   return(df)
 }
 
-###############################################
-# 3) Load clust_df (for microarray metadata)  #
-###############################################
+##########################################################
+# 3) Load microarray metadata
+##########################################################
 
-clust_file <- file.path(
-  proj_dir,
-  "data/way_pipeline_results_10removed_NeoRemoved_inclWhites/2.Clustering_DiffExprs-Tables-ClusterMembership/FullClusterMembership.csv"
-)
+clust_file <- file.path(input_data, "FullClusterMembership.csv")
+
 if (file.exists(clust_file)) {
   clust_df <- data.frame(fread(clust_file))
   colnames(clust_df)[1] <- "ID"
@@ -198,15 +198,15 @@ if (file.exists(clust_file)) {
   stop("Could not find FullClusterMembership.csv for microarray metadata.")
 }
 
-#########################################
-# 4) Process each dataset in two forms. #
-#########################################
+##########################################################
+# 4) Process, transform, and save datasets
+##########################################################
 
 ## A) SchildkrautB (RNA-seq)
 message("Processing SchildkrautB (RNA-seq)")
-schildB_metadata <- fread(file.path(proj_dir, "reference_data/main_AA_metadata_table.tsv"))
+schildB_metadata <- fread(file.path(input_data, "main_AA_metadata_table.tsv"))
 schildB_res <- read_format_expr(
-  in_file = file.path(proj_dir, "data/rna_seq_pilot_and_new/salmon_normalized_filtered_for_way_pipeline.tsv"),
+  in_file = file.path(input_data, "salmon_normalized_filtered_for_way_pipeline.tsv"),
   metadata_table = schildB_metadata
 )
 save_dual_versions(
@@ -217,9 +217,9 @@ save_dual_versions(
 
 ## B) SchildkrautW (RNA-seq)
 message("Processing SchildkrautW (RNA-seq)")
-schildW_metadata <- fread(file.path(proj_dir, "reference_data/main_white_metadata_table.tsv"))
+schildW_metadata <- fread(file.path(input_data, "main_white_metadata_table.tsv"))
 schildW_res <- read_format_expr(
-  in_file = file.path(proj_dir, "data/rna_seq_whites/salmon_normalized_filtered_for_way_pipeline_whites.tsv"),
+  in_file = file.path(input_data, "salmon_normalized_filtered_for_way_pipeline_whites.tsv"),
   metadata_table = schildW_metadata
 )
 save_dual_versions(
@@ -228,57 +228,83 @@ save_dual_versions(
   transform_type = "rnaseq"
 )
 
-## C) TCGA (Microarray)
-message("Processing TCGA (microarray)")
-data("TCGA_eset", package = "curatedOvarianData")
-tcga_dta <- exprs(TCGA_eset)
-tcga_metadata <- subset(clust_df, Dataset == "TCGA")
+## C) TCGA_bulk (RNA-seq) and TCGA_microarray (Microarray)
+## We will do these together to isolate only the samples in common between datasets
+message("Processing TCGA_bulk (RNA-seq) and TCGA_microarray (microarray)")
+  # Read TCGA bulk RNAseq
+  data("TCGA.RNASeqV2_eset", package = "curatedOvarianData")
+  tcga_bulk_dta <- exprs(TCGA.RNASeqV2_eset)
+  # Read TCGA microarray
+  data("TCGA_eset", package = "curatedOvarianData")
+  tcga_microarray_dta <- exprs(TCGA_eset)
+  # Filter TCGA bulk to only include HGSOC
+  pheno <- pData(TCGA.RNASeqV2_eset)
+  hgsoc_samples <- pheno$histological_type=="ser" & pheno$sample_type=="tumor" & pheno$summarygrade=="high"
+  hgsoc_samples[is.na(hgsoc_samples)] <- FALSE
+  tcga_bulk_dta <- tcga_bulk_dta[, hgsoc_samples]
+  # Filter TCGA microarray to only include HGSOC
+  pheno <- pData(TCGA_eset)
+  hgsoc_samples <- pheno$histological_type=="ser" & pheno$sample_type=="tumor" & pheno$summarygrade=="high"
+  hgsoc_samples[is.na(hgsoc_samples)] <- FALSE
+  tcga_microarray_dta <- tcga_microarray_dta[, hgsoc_samples]
+  # Find samples in common between the two datasets
+  tcga_common_samples <- intersect(colnames(tcga_bulk_dta), colnames(tcga_microarray_dta))
+  # Filter datasets to only include common samples
+  tcga_bulk_dta <- tcga_bulk_dta[, tcga_common_samples]
+  tcga_microarray_dta <- tcga_microarray_dta[, tcga_common_samples]
+  # Get metadata
+  tcga_metadata <- subset(clust_df, Dataset == "TCGA")
+  
+  res_tcga_bulk <- read_format_cOD_expr(tcga_bulk_dta, tcga_metadata)
+  save_dual_versions(
+    expr_merged = res_tcga_bulk[[1]],
+    dataset_name = "TCGA_bulk",
+    transform_type = "rnaseq"
+  )
+  
+  res_tcga_microarray <- read_format_cOD_expr(tcga_microarray_dta, tcga_metadata)
+  save_dual_versions(
+    expr_merged = res_tcga_microarray[[1]],
+    dataset_name = "TCGA_microarray",
+    transform_type = "microarray"
+  )
 
-res_tcga <- read_format_MA_expr(tcga_dta, tcga_metadata)
-save_dual_versions(
-  expr_merged = res_tcga[[1]],
-  dataset_name = "TCGA",
-  transform_type = "microarray"
-)
-
-## D) Mayo (Microarray)
-message("Processing Mayo (microarray)")
-obj_names <- load(file.path(proj_dir, "data/mayo/MayoEset.Rda"), envir=environment())
-ExpressionData <- get("mayo.eset")
-mayo_dta <- exprs(ExpressionData)
-mayo_metadata <- subset(clust_df, Dataset == "mayo.eset")
-
-res_mayo <- read_format_MA_expr(mayo_dta, mayo_metadata)
-save_dual_versions(
-  expr_merged = res_mayo[[1]],
-  dataset_name = "Mayo",
-  transform_type = "microarray"
-)
-
-## E) Tothill (Microarray)
+## D) Tothill (Microarray)
 message("Processing Tothill (microarray)")
 data("GSE9891_eset", package = "curatedOvarianData")
 tothill_dta <- exprs(GSE9891_eset)
+# Filter to only include HGSOC
+pheno <- pData(GSE9891_eset)
+hgsoc_samples <- pheno$histological_type=="ser" & pheno$sample_type=="tumor" & pheno$summarygrade=="high"
+hgsoc_samples[is.na(hgsoc_samples)] <- FALSE
+tothill_dta <- tothill_dta[, hgsoc_samples]
+# Get metadata
 tothill_metadata <- subset(clust_df, Dataset == "Tothill")
 
-res_tothill <- read_format_MA_expr(tothill_dta, tothill_metadata)
+res_tothill <- read_format_cOD_expr(tothill_dta, tothill_metadata)
 save_dual_versions(
   expr_merged = res_tothill[[1]],
   dataset_name = "Tothill",
   transform_type = "microarray"
 )
 
-## F) Yoshihara (Microarray)
+## E) Yoshihara (Microarray)
 message("Processing Yoshihara (microarray)")
 data("GSE32062.GPL6480_eset", package = "curatedOvarianData")
 yoshi_dta <- exprs(GSE32062.GPL6480_eset)
+# Filter to only include HGSOC
+pheno <- pData(GSE32062.GPL6480_eset)
+hgsoc_samples <- pheno$histological_type=="ser" & pheno$sample_type=="tumor" & pheno$summarygrade=="high"
+hgsoc_samples[is.na(hgsoc_samples)] <- FALSE
+yoshi_dta <- yoshi_dta[, hgsoc_samples]
+# Get metadata
 yoshi_metadata <- subset(clust_df, Dataset == "Yoshihara")
 
-res_yoshi <- read_format_MA_expr(yoshi_dta, yoshi_metadata)
+res_yoshi <- read_format_cOD_expr(yoshi_dta, yoshi_metadata)
 save_dual_versions(
   expr_merged = res_yoshi[[1]],
   dataset_name = "Yoshihara",
   transform_type = "microarray"
 )
 
-message("All datasets processed with both asImported & transformed versions!")
+message("All datasets transformed and saved as both asImported & transformed versions!")
