@@ -16,12 +16,13 @@
 rm(list = ls())
 gc()
 
-# Load the renv library
+# Load the renv library from the lockfile
 if (!requireNamespace("renv", quietly = TRUE)) {
   install.packages("renv")  # Install renv if not already installed
 }
 library(renv)
-renv::load()
+renv::init()
+renv::restore()
 
 # Load Required Libraries
 library(data.table)
@@ -48,7 +49,7 @@ colnames(MAD_genes) <- "hgnc_symbol"
 # 1) Helper reading/merging functions 
 ##########################################################
 
-# read RNAseq data from file
+# read Schildkraut data from file
 read_format_expr <- function(in_file, metadata_table){
   # 1) Read file with fill=TRUE to handle irregular columns
   rnaseq_expr_df <- data.frame(fread(in_file, fill = TRUE))
@@ -77,8 +78,8 @@ read_format_expr <- function(in_file, metadata_table){
   return(list(full_df, gene_ids))
 }
 
-# read microarray data from an in_df object
-read_format_MA_expr <- function(in_df, metadata_table){
+# read curatedOvarianData data from an in_df object
+read_format_cOD_expr <- function(in_df, metadata_table){
   rnaseq_expr_df <- as.data.frame(in_df)  # ensure data.frame
   gene_ids <- rownames(rnaseq_expr_df)
   sample_ids <- colnames(rnaseq_expr_df)
@@ -227,52 +228,79 @@ save_dual_versions(
   transform_type = "rnaseq"
 )
 
-## C) TCGA_bulk (RNA-seq)
-message("Processing TCGA_bulk (RNA-seq)")
-data("TCGA.RNASeqV2_eset", package = "curatedOvarianData")
-tcga_bulk_dta <- exprs(TCGA.RNASeqV2_eset)
-tcga_bulk_metadata <- subset(clust_df, Dataset == "TCGA")
+## C) TCGA_bulk (RNA-seq) and TCGA_microarray (Microarray)
+## We will do these together to isolate only the samples in common between datasets
+message("Processing TCGA_bulk (RNA-seq) and TCGA_microarray (microarray)")
+  # Read TCGA bulk RNAseq
+  data("TCGA.RNASeqV2_eset", package = "curatedOvarianData")
+  tcga_bulk_dta <- exprs(TCGA.RNASeqV2_eset)
+  # Read TCGA microarray
+  data("TCGA_eset", package = "curatedOvarianData")
+  tcga_microarray_dta <- exprs(TCGA_eset)
+  # Filter TCGA bulk to only include HGSOC
+  pheno <- pData(TCGA.RNASeqV2_eset)
+  hgsoc_samples <- pheno$histological_type=="ser" & pheno$sample_type=="tumor" & pheno$summarygrade=="high"
+  hgsoc_samples[is.na(hgsoc_samples)] <- FALSE
+  tcga_bulk_dta <- tcga_bulk_dta[, hgsoc_samples]
+  # Filter TCGA microarray to only include HGSOC
+  pheno <- pData(TCGA_eset)
+  hgsoc_samples <- pheno$histological_type=="ser" & pheno$sample_type=="tumor" & pheno$summarygrade=="high"
+  hgsoc_samples[is.na(hgsoc_samples)] <- FALSE
+  tcga_microarray_dta <- tcga_microarray_dta[, hgsoc_samples]
+  # Find samples in common between the two datasets
+  tcga_common_samples <- intersect(colnames(tcga_bulk_dta), colnames(tcga_microarray_dta))
+  # Filter datasets to only include common samples
+  tcga_bulk_dta <- tcga_bulk_dta[, tcga_common_samples]
+  tcga_microarray_dta <- tcga_microarray_dta[, tcga_common_samples]
+  # Get metadata
+  tcga_metadata <- subset(clust_df, Dataset == "TCGA")
+  
+  res_tcga_bulk <- read_format_cOD_expr(tcga_bulk_dta, tcga_metadata)
+  save_dual_versions(
+    expr_merged = res_tcga_bulk[[1]],
+    dataset_name = "TCGA_bulk",
+    transform_type = "rnaseq"
+  )
+  
+  res_tcga_microarray <- read_format_cOD_expr(tcga_microarray_dta, tcga_metadata)
+  save_dual_versions(
+    expr_merged = res_tcga_microarray[[1]],
+    dataset_name = "TCGA_microarray",
+    transform_type = "microarray"
+  )
 
-res_tcga_bulk <- read_format_MA_expr(tcga_bulk_dta, tcga_bulk_metadata)
-save_dual_versions(
-  expr_merged = res_tcga_bulk[[1]],
-  dataset_name = "TCGA_bulk",
-  transform_type = "rnaseq"
-)
-
-## D) TCGA_microarray (Microarray)
-message("Processing TCGA_microarray (microarray)")
-data("TCGA_eset", package = "curatedOvarianData")
-tcga_microarray_dta <- exprs(TCGA_eset)
-tcga_microarray_metadata <- subset(clust_df, Dataset == "TCGA")
-
-res_tcga_microarray <- read_format_MA_expr(tcga_microarray_dta, tcga_microarray_metadata)
-save_dual_versions(
-  expr_merged = res_tcga_microarray[[1]],
-  dataset_name = "TCGA_microarray",
-  transform_type = "microarray"
-)
-
-## E) Tothill (Microarray)
+## D) Tothill (Microarray)
 message("Processing Tothill (microarray)")
 data("GSE9891_eset", package = "curatedOvarianData")
 tothill_dta <- exprs(GSE9891_eset)
+# Filter to only include HGSOC
+pheno <- pData(GSE9891_eset)
+hgsoc_samples <- pheno$histological_type=="ser" & pheno$sample_type=="tumor" & pheno$summarygrade=="high"
+hgsoc_samples[is.na(hgsoc_samples)] <- FALSE
+tothill_dta <- tothill_dta[, hgsoc_samples]
+# Get metadata
 tothill_metadata <- subset(clust_df, Dataset == "Tothill")
 
-res_tothill <- read_format_MA_expr(tothill_dta, tothill_metadata)
+res_tothill <- read_format_cOD_expr(tothill_dta, tothill_metadata)
 save_dual_versions(
   expr_merged = res_tothill[[1]],
   dataset_name = "Tothill",
   transform_type = "microarray"
 )
 
-## F) Yoshihara (Microarray)
+## E) Yoshihara (Microarray)
 message("Processing Yoshihara (microarray)")
 data("GSE32062.GPL6480_eset", package = "curatedOvarianData")
 yoshi_dta <- exprs(GSE32062.GPL6480_eset)
+# Filter to only include HGSOC
+pheno <- pData(GSE32062.GPL6480_eset)
+hgsoc_samples <- pheno$histological_type=="ser" & pheno$sample_type=="tumor" & pheno$summarygrade=="high"
+hgsoc_samples[is.na(hgsoc_samples)] <- FALSE
+yoshi_dta <- yoshi_dta[, hgsoc_samples]
+# Get metadata
 yoshi_metadata <- subset(clust_df, Dataset == "Yoshihara")
 
-res_yoshi <- read_format_MA_expr(yoshi_dta, yoshi_metadata)
+res_yoshi <- read_format_cOD_expr(yoshi_dta, yoshi_metadata)
 save_dual_versions(
   expr_merged = res_yoshi[[1]],
   dataset_name = "Yoshihara",
