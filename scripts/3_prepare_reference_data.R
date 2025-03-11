@@ -425,7 +425,7 @@ for (n in c(seq.int(2,length(adipose_file_names)))) {
 
 # Finally we can combine these into one large adipose matrix
 # Create a list of objects
-adipose_subset_object_list <- mget(paste0("sn_adipose",1:length(adipose_file_names),"_subset"))
+adipose_subset_object_list <- mget(paste0("adipose",1:length(adipose_file_names),"_subset"))
 
 # Extract expression matrices from each object
 get_expression_matrices <- lapply(adipose_subset_object_list, function(obj) {
