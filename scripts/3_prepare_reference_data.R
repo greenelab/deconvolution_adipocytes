@@ -259,32 +259,36 @@ adipose_file_names <- c("GSM5359325_Hs_OAT_01-1.dge.tsv",
                         "GSM5359334_Hs_SAT_253-1.dge.tsv",
                         "GSM5359335_Hs_SAT_254-1.dge.tsv",
                         "GSM5359336_Hs_SAT_255-1.dge.tsv",
-                        "GSM5359337_Hs_SAT_256-1.dge.tsv")
+                        "GSM5359337_Hs_SAT_256-1.dge.tsv",
+                        "GSM5820679_Hs_OAT_09-1.dge.tsv",
+                        "GSM5820680_Hs_OAT_10-1.dge.tsv",
+                        "GSM5820684_Hs_SAT_09-1.dge.tsv",
+                        "GSM5820685_Hs_SAT_10-1.dge.tsv",
+                        "GSM5820686_Hs_SAT_11-1.dge.tsv")
 
 # Use readSparseCounts from "scuttle" package to read these large files
 for (file in adipose_file_names) {
-  print(paste0("reading ",file," (adipose",which(adipose_file_names == file),")"))
+  print(paste0("Reading ",file," (adipose",which(adipose_file_names == file),")"))
   assign(paste0("adipose",(which(adipose_file_names == file))),
          readSparseCounts(file.path(input_data, file), sep="\t", quote=NULL, comment.char="", row.names=TRUE,
                           col.names=TRUE, ignore.row=0L, skip.row=0L, ignore.col=0L, skip.col=0L, chunk=1000L))
 }
 
 # Let's append the sample name to the column names (cell IDs), to match the formatting of the metadata file
-for (n in c(seq.int(1,13))) {
+for (n in c(seq.int(1,length(adipose_file_names)))) {
   matrix <- get(paste0("adipose",n))
   new_colnames <- colnames(matrix)
   sample_name <- sub("GSM\\d+_([^_]+_[^_]+_[^_]+).dge.tsv", "\\1", adipose_file_names[n])
   new_colnames <- paste(sample_name, new_colnames, sep="_")
-  print(new_colnames)
   colnames(matrix) <- new_colnames
   assign(paste0("adipose",n), matrix)
 }
 
-# Let's find the row names (genes) that are shared in common between adipose files
-adipose_genes <- list(rownames(adipose1), rownames(adipose2), rownames(adipose3), rownames(adipose4), rownames(adipose5),
-                      rownames(adipose6), rownames(adipose7), rownames(adipose8), rownames(adipose9),
-                      rownames(adipose10), rownames(adipose11), rownames(adipose12), rownames(adipose13))
+# Make a list of the sn adipose objects
+adipose_object_list <- mget(paste0("adipose", 1:length(adipose_file_names)))
 
+# Let's find the row names (genes) that are shared in common between adipose files
+adipose_genes <- lapply(adipose_object_list, rownames)
 adipose_common_genes <- Reduce(intersect, adipose_genes)
 
 # Now we will find the genes (as GeneCards symbols) in common between the the single cell and the adipose data.
@@ -292,13 +296,13 @@ all_overlap_genes <- intersect(rep1_sc_features[,2], adipose_common_genes)
 print(paste0("Identified ",length(all_overlap_genes)," total genes in common between sc and sn RNAseq data."))
 
 # Now we will subset each adipose matrix to only include common genes
-for (n in c(seq.int(1,13))) {
+for (n in c(seq.int(1,length(adipose_file_names)))) {
   assign(paste0("adipose",n,"_subset"),
          get(paste0("adipose",n))[all_overlap_genes,])
 }
 
 # Removing the large matrices from R's memory to save space
-rm(adipose1, adipose2, adipose3, adipose4, adipose5, adipose6, adipose7, adipose8, adipose9, adipose10, adipose11, adipose12, adipose13)
+rm(list = ls(pattern = "^sn_adipose\\d+$"))
 gc()
 
 ##########################################################
@@ -306,12 +310,12 @@ gc()
 #    remove non-adipocytes nuclei, remove nuclei with high
 #    mitochondrial gene read levels, remove low-quality
 #    cells, empty droplets, and cell doublets/multiplets
-#    using Seurat. Then, combine all 13 processed samples
+#    using Seurat. Then, combine all processed samples
 #    together into one large gene expression matrix.
 ##########################################################
 
 # Remove any duplicate samples (columns) from the expression matrices
-for (n in c(seq.int(1,13))) {
+for (n in c(seq.int(1,length(adipose_file_names)))) {
   matrix <- get(paste0("adipose",n,"_subset"))
   indices <- which(duplicated(colnames(matrix)))
   print(paste0("Identified ",length(indices)," duplicate samples in adipose",n,", of ",ncol(matrix)," total samples."))
@@ -338,7 +342,7 @@ adipocytes_IDs <- adipose_metadata[adipose_metadata$cell_type__custom == "adipoc
 adipocytes_IDs <- adipocytes_IDs$cell_id
 
 # Subset each expression matrix to only include the adipocytes
-for (n in c(seq.int(1,13))) {
+for (n in c(seq.int(1,length(adipose_file_names)))) {
   matrix <- get(paste0("adipose",n,"_subset"))
   adipocytes <- intersect(colnames(matrix), adipocytes_IDs)
   print(paste0("Identified ",length(adipocytes)," adipocytes in adipose",n," of ",ncol(matrix)," total samples."))
@@ -356,7 +360,7 @@ gc()
 # as well as any sample with >5% of all reads coming from mitochondrial genes.
 
 # Removing samples with >50 total mitochondrial gene reads
-for (n in c(seq.int(1,13))) {
+for (n in c(seq.int(1,length(adipose_file_names)))) {
   # Find mitochondrial genes (gene names starting with "MT-")
   mito_gene_indices <- grep("MT-", rownames(get(paste0("adipose",n,"_subset"))))
   mito_genes <- get(paste0("adipose",n,"_subset"))[mito_gene_indices,]
@@ -374,7 +378,7 @@ for (n in c(seq.int(1,13))) {
 }
 
 # Removing samples with >5% of all reads coming from mitochondrial genes
-for (n in c(seq.int(1,13))) {
+for (n in c(seq.int(1,length(adipose_file_names)))) {
   # Find mitochondrial genes (gene names starting with "MT-")
   mito_gene_indices <- grep("MT-", rownames(get(paste0("adipose",n,"_subset"))))
   
@@ -398,7 +402,7 @@ for (n in c(seq.int(1,13))) {
 # Now we will use the Seurat package to remove low-quality nuclei, empty droplets, and nuclei doublets/multiplets.
 # We will filter out samples that express fewer than 250 unique genes (likely low quality), 
 # as well as samples that express greater than 4000 unique genes (likely doublet/multiplet).
-for (n in c(seq.int(1,13))) {
+for (n in c(seq.int(1,length(adipose_file_names)))) {
   obj <- CreateSeuratObject(counts = get(paste0("adipose",n,"_subset")))
   low_genes <- which(obj$nFeature_RNA < 250)
   high_genes <- which(obj$nFeature_RNA > 4000)
@@ -413,21 +417,27 @@ for (n in c(seq.int(1,13))) {
 
 # Let's ensure that the row names (genes), are identical between adipose
 # samples so that the matrices can be accurately bound together horizontally.
-for (n in c(seq.int(2,13))) {
+for (n in c(seq.int(2,length(adipose_file_names)))) {
   if(!identical(rownames(get(paste0("adipose",n,"_subset"))),rownames(adipose1_subset))){
     stop("Warning! Row names (genes) are not identical between adipose samples.")
   }
 }
 
 # Finally we can combine these into one large adipose matrix
-all_adipose_expr <- cbind(adipose1_subset, adipose2_subset, adipose3_subset, adipose4_subset, adipose5_subset,
-                          adipose6_subset, adipose7_subset, adipose8_subset, adipose9_subset,
-                          adipose10_subset, adipose11_subset, adipose12_subset, adipose13_subset)
+# Create a list of objects
+adipose_subset_object_list <- mget(paste0("sn_adipose",1:length(adipose_file_names),"_subset"))
+
+# Extract expression matrices from each object
+get_expression_matrices <- lapply(adipose_subset_object_list, function(obj) {
+  return(obj) 
+})
+
+# Bind the matrices together horizontally
+all_adipose_expr <- do.call(cbind, get_expression_matrices)
 
 # Removing the subsetted matrices from R's memory to save space
-rm(adipose1_subset, adipose2_subset, adipose3_subset, adipose4_subset, adipose5_subset,
-   adipose6_subset, adipose7_subset, adipose8_subset, adipose9_subset,
-   adipose10_subset, adipose11_subset, adipose12_subset, adipose13_subset)
+rm(adipose_subset_object_list)
+rm(list = ls(pattern = "^sn_adipose\\d+_subset$"))
 gc()
 
 ##########################################################
