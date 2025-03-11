@@ -81,7 +81,7 @@ Prior to running these scripts, please ensure that the below raw data files have
 - 2428_labels.txt
 - 2467_labels.txt
 - 2497_labels.txt
-## Single nucleus adipocyte reference data:
+## Single nucleus adipose reference data:
 ### From http://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE176171:
 #### GSM5359325 Human visceral white adipose 01-1
 - GSM5359325_Hs_OAT_01-1.dge.tsv.gz
@@ -109,5 +109,15 @@ Prior to running these scripts, please ensure that the below raw data files have
 - GSM5359336_Hs_SAT_255-1.dge.tsv.gz
 #### GSM5359337 Human subcutaneous white adipose 256-1
 - GSM5359337_Hs_SAT_256-1.dge.tsv.gz
+#### GSM5820679	Human visceral white adipose 09-1
+- GSM5820679_Hs_OAT_09-1.dge.tsv.gz
+#### GSM5820680	Human visceral white adipose 10-1
+- GSM5820680_Hs_OAT_10-1.dge.tsv.gz
+#### GSM5820684	Human subcutaneous white adipose 09-1
+- GSM5820684_Hs_SAT_09-1.dge.tsv.gz
+#### GSM5820685	Human subcutaneous white adipose 10-1
+- GSM5820685_Hs_SAT_10-1.dge.tsv.gz
+#### GSM5820686	Human subcutaneous white adipose 11-1
+- GSM5820686_Hs_SAT_11-1.dge.tsv.gz
 #### Metadata
 - GSE176171_cell_metadata.tsv.gz
