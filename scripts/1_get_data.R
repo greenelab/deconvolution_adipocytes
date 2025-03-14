@@ -30,6 +30,7 @@ library(dplyr)
 library(Biobase)  # for ExpressionSet access
 library(curatedOvarianData)
 library(here)
+library(readxl)
 
 # Set base directories
 # Be sure to open this script along with a corresponding project
@@ -230,31 +231,54 @@ save_dual_versions(
 
 ## C) TCGA_bulk (RNA-seq) and TCGA_microarray (Microarray)
 ## We will do these together to isolate only the samples in common between datasets
-message("Processing TCGA_bulk (RNA-seq) and TCGA_microarray (microarray)")
+
+message("Processing TCGA_bulk (RNA-seq)")
+
   # Read TCGA bulk RNAseq
-  data("TCGA.RNASeqV2_eset", package = "curatedOvarianData")
-  tcga_bulk_dta <- exprs(TCGA.RNASeqV2_eset)
+  tcga_bulk_dta <- fread(file.path(input_data,"EBPlusPlusAdjustPANCAN_IlluminaHiSeq_RNASeqV2.geneExp.tsv"),
+                                   data.table = FALSE)
+  # Set the first column (genes) as rownames
+  rownames(tcga_bulk_dta) <- tcga_bulk_dta[,1]
+  tcga_bulk_dta <- tcga_bulk_dta[,-1]
+  # These sample IDs (column names) do not exactly match the format of the sample IDs in the supplemental info table
+  # Trim them down to match the TCGA-XX-XXXX patient barcode format of the supplemental info table
+  # Ex. "TCGA-OR-A5J3-01A-11R-A29S-07" --> "TCGA-OR-A5J3"
+  colnames(tcga_bulk_dta) <- sapply(strsplit(colnames(tcga_bulk_dta), "-"),
+                           function(x) paste(x[1:3], collapse = "-"))
+  # Read TCGA bulk supplemental sample information
+  tcga_bulk_info <- readxl::read_excel(file.path(input_data,"TCGA-CDR-SupplementalTableS1.xlsx"),
+                                                   sheet = "TCGA-CDR", na = "#N/A")
+  # Use the supplemental info table to find the HGSOC sample IDs
+  hgsoc_sample_indices <- tcga_bulk_info$type=="OV" &
+                          tcga_bulk_info$histological_type=="Serous Cystadenocarcinoma" &
+                          tcga_bulk_info$histological_grade=="G3"
+  hgsoc_sample_IDs <- tcga_bulk_info$bcr_patient_barcode[hgsoc_sample_indices]
+  # Filter TCGA bulk to only include HGSOC
+  tcga_bulk_dta <- tcga_bulk_dta[,colnames(tcga_bulk_dta) %in% hgsoc_sample_IDs]
+  # Change the hyphens in the TCGA_bulk sample IDs to periods to match the TCGA microarray sample ID formatting
+  colnames(tcga_bulk_dta) <- gsub("-",".",colnames(tcga_bulk_dta))
+
+message("Processing TCGA_microarray (microarray)")
+  
   # Read TCGA microarray
   data("TCGA_eset", package = "curatedOvarianData")
   tcga_microarray_dta <- exprs(TCGA_eset)
-  # Filter TCGA bulk to only include HGSOC
-  pheno <- pData(TCGA.RNASeqV2_eset)
-  hgsoc_samples <- pheno$histological_type=="ser" & pheno$sample_type=="tumor" & pheno$summarygrade=="high"
-  hgsoc_samples[is.na(hgsoc_samples)] <- FALSE
-  tcga_bulk_dta <- tcga_bulk_dta[, hgsoc_samples]
   # Filter TCGA microarray to only include HGSOC
   pheno <- pData(TCGA_eset)
   hgsoc_samples <- pheno$histological_type=="ser" & pheno$sample_type=="tumor" & pheno$summarygrade=="high"
   hgsoc_samples[is.na(hgsoc_samples)] <- FALSE
   tcga_microarray_dta <- tcga_microarray_dta[, hgsoc_samples]
+  
   # Find samples in common between the two datasets
   tcga_common_samples <- intersect(colnames(tcga_bulk_dta), colnames(tcga_microarray_dta))
   # Filter datasets to only include common samples
   tcga_bulk_dta <- tcga_bulk_dta[, tcga_common_samples]
   tcga_microarray_dta <- tcga_microarray_dta[, tcga_common_samples]
+  
   # Get metadata
   tcga_metadata <- subset(clust_df, Dataset == "TCGA")
   
+  # Read TCGA bulk
   res_tcga_bulk <- read_format_cOD_expr(tcga_bulk_dta, tcga_metadata)
   save_dual_versions(
     expr_merged = res_tcga_bulk[[1]],
@@ -262,13 +286,14 @@ message("Processing TCGA_bulk (RNA-seq) and TCGA_microarray (microarray)")
     transform_type = "rnaseq"
   )
   
+  # Read TCGA microarray
   res_tcga_microarray <- read_format_cOD_expr(tcga_microarray_dta, tcga_metadata)
   save_dual_versions(
     expr_merged = res_tcga_microarray[[1]],
     dataset_name = "TCGA_microarray",
     transform_type = "microarray"
   )
-
+  
 ## D) Tothill (Microarray)
 message("Processing Tothill (microarray)")
 data("GSE9891_eset", package = "curatedOvarianData")
