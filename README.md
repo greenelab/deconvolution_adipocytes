@@ -6,7 +6,7 @@
 The purpose of the code in this repository is to use the InstaPrism R package (https://github.com/humengying0907/InstaPrism/tree/master) to run Bayes Prism deconvolution on the following bulk RNA seq and microarray datasets of high grade serous ovarian carcinoma (HGSOC) samples:
 - “SchildkrautB” – bulk RNA sequencing of HGSOC from Black patients.
 - “SchildkrautW” – bulk RNA sequencing of HGSOC from White patients.
-- “TCGA_bulk” – bulk RNA sequencing of HGSOC, accessed via the curatedOvarianData R package (dataset name in package: “TCGA.RNASeqV2_eset”)
+- “TCGA_bulk” – bulk RNA sequencing of HGSOC, accessed via the NIH Genomic Data Commons (GDC) TCGA Pan-Cancer Atlas (PanCanAtlas)
 - “TCGA_microarray” – microarray of HGSOC, accessed via the curatedOvarianData R package (dataset name in package: “TCGA_eset”)
 - “Tothill” – microarray of HGSOC, accessed via the curatedOvarianData R package (dataset name in package: “GSE9891_eset”)
 - “Yoshihara” – microarray of HGSOC, accessed via the curatedOvarianData R package (dataset name in package: “GSE32062.GPL6480_eset”)
@@ -38,6 +38,10 @@ Prior to running these scripts, please ensure that the below raw data files have
 ### From https://github.com/nrosed/hgsc_characterization/tree/master: 
 - /data/rna_seq_pilot_and_new/salmon_normalized_filtered_for_way_pipeline.tsv
 - /data/rna_seq_whites/salmon_normalized_filtered_for_way_pipeline_whites.tsv
+## TCGA bulk dataset:
+### From https://gdc.cancer.gov/about-data/publications/pancanatlas:
+- EBPlusPlusAdjustPANCAN_IlluminaHiSeq_RNASeqV2.geneExp.tsv
+- TCGA-CDR-SupplementalTableS1.xlsx
 ## Single cell RNA sequencing data and cell type IDs:
 ### From https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE217517:
 #### GSM6720925 Dissociated cells, single cell sequenced, rep1
