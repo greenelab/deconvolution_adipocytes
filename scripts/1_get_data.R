@@ -257,6 +257,12 @@ message("Processing TCGA_bulk (RNA-seq)")
   tcga_bulk_dta <- tcga_bulk_dta[,colnames(tcga_bulk_dta) %in% hgsoc_sample_IDs]
   # Change the hyphens in the TCGA_bulk sample IDs to periods to match the TCGA microarray sample ID formatting
   colnames(tcga_bulk_dta) <- gsub("-",".",colnames(tcga_bulk_dta))
+  # The genes (row names) are denoted as "hgnc_symbol|entrez_ID"
+  # Some have "?" for the hgnc_symbol, we will remove those genes
+  gene_names <- strsplit(rownames(tcga_bulk_dta), split = "\\|")
+  gene_names <- sapply(gene_names, "[[", 1)
+  gene_names <- gene_names[gene_names != "?"]
+  rownames(tcga_bulk_dta) <- gene_names
 
 message("Processing TCGA_microarray (microarray)")
   
@@ -277,6 +283,10 @@ message("Processing TCGA_microarray (microarray)")
   
   # Get metadata
   tcga_metadata <- subset(clust_df, Dataset == "TCGA")
+  
+  
+  
+  intersect(rownames(tcga_bulk_dta),rownames(tcga_microarray_dta))
   
   # Read TCGA bulk
   res_tcga_bulk <- read_format_cOD_expr(tcga_bulk_dta, tcga_metadata)
