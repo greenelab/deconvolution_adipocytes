@@ -259,10 +259,13 @@ message("Processing TCGA_bulk (RNA-seq)")
   colnames(tcga_bulk_dta) <- gsub("-",".",colnames(tcga_bulk_dta))
   # The genes (row names) are denoted as "hgnc_symbol|entrez_ID"
   # Some have "?" for the hgnc_symbol, we will remove those genes
+  # We will also remove any duplicated hgnc genes
   gene_names <- strsplit(rownames(tcga_bulk_dta), split = "\\|")
   gene_names <- sapply(gene_names, "[[", 1)
-  gene_names <- gene_names[gene_names != "?"]
-  rownames(tcga_bulk_dta) <- gene_names
+  rows_to_remove <- union(which(gene_names == "?"),
+                          which(duplicated(gene_names)))
+  tcga_bulk_dta <- tcga_bulk_dta[-rows_to_remove,]
+  rownames(tcga_bulk_dta) <- gene_names[-rows_to_remove]
 
 message("Processing TCGA_microarray (microarray)")
   
@@ -283,10 +286,6 @@ message("Processing TCGA_microarray (microarray)")
   
   # Get metadata
   tcga_metadata <- subset(clust_df, Dataset == "TCGA")
-  
-  
-  
-  intersect(rownames(tcga_bulk_dta),rownames(tcga_microarray_dta))
   
   # Read TCGA bulk
   res_tcga_bulk <- read_format_cOD_expr(tcga_bulk_dta, tcga_metadata)
