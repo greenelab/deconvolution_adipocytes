@@ -266,6 +266,8 @@ message("Processing TCGA_bulk (RNA-seq)")
                           which(duplicated(gene_names)))
   tcga_bulk_dta <- tcga_bulk_dta[-rows_to_remove,]
   rownames(tcga_bulk_dta) <- gene_names[-rows_to_remove]
+  # Set any NA values to zero
+  tcga_bulk_dta[is.na(tcga_bulk_dta)] <- 0
 
 message("Processing TCGA_microarray (microarray)")
   
