@@ -268,6 +268,8 @@ message("Processing TCGA_bulk (RNA-seq)")
   rownames(tcga_bulk_dta) <- gene_names[-rows_to_remove]
   # Set any NA values to zero
   tcga_bulk_dta[is.na(tcga_bulk_dta)] <- 0
+  # Set any negative values to zero
+  tcga_bulk_dta[tcga_bulk_dta < 0] <- 0
 
 message("Processing TCGA_microarray (microarray)")
   
