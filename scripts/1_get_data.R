@@ -207,7 +207,7 @@ if (file.exists(clust_file)) {
 message("Processing SchildkrautB (RNA-seq)")
 schildB_metadata <- fread(file.path(input_data, "main_AA_metadata_table.tsv"))
 schildB_res <- read_format_expr(
-  in_file = file.path(input_data, "salmon_normalized_filtered_for_way_pipeline.tsv"),
+  in_file = file.path(input_data, "salmon_raw_counts_for_way_pipeline.tsv"),
   metadata_table = schildB_metadata
 )
 save_dual_versions(
@@ -220,7 +220,7 @@ save_dual_versions(
 message("Processing SchildkrautW (RNA-seq)")
 schildW_metadata <- fread(file.path(input_data, "main_white_metadata_table.tsv"))
 schildW_res <- read_format_expr(
-  in_file = file.path(input_data, "salmon_normalized_filtered_for_way_pipeline_whites.tsv"),
+  in_file = file.path(input_data, "salmon_raw_counts_for_way_pipeline_whites.tsv"),
   metadata_table = schildW_metadata
 )
 save_dual_versions(
