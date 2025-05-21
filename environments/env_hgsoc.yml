@@ -1,4 +1,4 @@
-name: env_hgsoc_R
+name: env_hgsoc
 channels:
   - conda-forge
   - bioconda
@@ -6,7 +6,7 @@ dependencies:
   # ---- core language runtimes ----
   - r-base=4.4.1
   - r-irkernel                
-  - python=3.11
+  - python=3.10.16
   - nextflow                   # workflow engine
   - openjdk                    # Nextflow runtime
   # ---- build tool-chain for renv ----
@@ -42,6 +42,7 @@ dependencies:
   - bioconductor-genomicranges
   - bioconductor-hdf5array
   - bioconductor-iranges
+   # ---- Python packages ---- 
   - pandas
   - numpy
   - jupyterlab
