@@ -20,6 +20,7 @@ cd "${PRJ_DIR}"
 # --------------------------------------------------
 # 1) Load Conda and activate env_hgsoc
 # --------------------------------------------------
+source "$(conda info --base)/etc/profile.d/conda.sh"
 
 ENV_YML="${PRJ_DIR}/environments/env_hgsoc.yml"
 
