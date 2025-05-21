@@ -1,0 +1,48 @@
+name: env_hgsoc_R
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  # ---- core language runtimes ----
+  - r-base=4.4.1
+  - r-irkernel                
+  - python=3.11
+  - nextflow                   # workflow engine
+  - openjdk                    # Nextflow runtime
+  # ---- build tool-chain for renv ----
+  - gcc                        # C compiler
+  - gxx                        # C++ compiler
+  - gfortran                   # Fortran (some BioC pkgs)
+  - make
+  - cmake
+  - pkg-config
+  - icu
+  # ---- CRAN/BioC packages that have Conda builds ----
+  - r-aims
+  - bioconductor-annotationdbi
+  - r-bh
+  - bioconductor-biobase
+  - bioconductor-biocfilecache
+  - bioconductor-biocgenerics
+  - r-biocmanager
+  - bioconductor-biocparallel
+  - bioconductor-biocsingular
+  - bioconductor-biocversion
+  - bioconductor-biostrings
+  - r-dbi
+  - bioconductor-delayedarray
+  - bioconductor-delayedmatrixstats
+  - r-deriv
+  - r-fnn
+  - r-formula
+  - bioconductor-gseabase
+  - bioconductor-gsva
+  - bioconductor-genomeinfodb
+  - bioconductor-genomeinfodbdata
+  - bioconductor-genomicranges
+  - bioconductor-hdf5array
+  - bioconductor-iranges
+  - pandas
+  - numpy
+  - jupyterlab
+  - matplotlib
