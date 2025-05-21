@@ -40,6 +40,16 @@ dir.create(instaprism_folder, recursive = TRUE, showWarnings = FALSE)
 set.seed(5)
 
 ##########################################################
+# 0) Genes to remove (for adipocyte reference only)
+##########################################################
+genes_to_remove <- fread(
+  file.path(here(), "input_data", "intersect_3ds.csv"),
+  header = FALSE,        # your file has no header row
+  data.table = FALSE
+)[, 2]                   # second column holds the symbols
+genes_to_remove <- unique(na.omit(genes_to_remove))
+
+##########################################################
 # 1) Read sn+sc reference files
 ##########################################################
 
@@ -53,6 +63,10 @@ colnames(scExpr_all) <- (1:ncol(scExpr_all))
 cell_type_labels <- fread(file.path(output_data,"sc_sn_reference_data/reference_cell_types_final.csv"),
                           data.table = FALSE)
 cell_type_labels <- cell_type_labels[,"cellType"]
+
+#  Remove the unwanted genes *only for the adipocyte run* intersection genes based on previous work
+scExpr_subset_all <- scExpr_subset_all[
+  !rownames(scExpr_subset_all) %in% genes_to_remove, ]
 
 ##########################################################
 # 2) Select 500 cells of each cell type from the large 
