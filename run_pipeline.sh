@@ -21,10 +21,12 @@ cd "${PRJ_DIR}"
 # 1) Load Conda and activate env_hgsoc
 # --------------------------------------------------
 
-# create the env once, reuse afterwards
+ENV_YML="${PRJ_DIR}/environments/env_hgsoc.yml"
+
+# create the env once; reuse afterwards
 if ! conda env list | grep -q '^env_hgsoc '; then
     echo "••• Creating Conda environment env_hgsoc"
-    conda env create -f env_hgsoc.yml
+    conda env create -f "${ENV_YML}"
 fi
 conda activate env_hgsoc          # puts R, Nextflow, compilers on PATH
 
