@@ -10,6 +10,18 @@
 workflow {
 
     /*
+     * 0) Decompress all input data.
+     */
+    process UNZIP {
+        tag 'unzip_data'
+        script:
+        """
+        cd ${params.projectDir}
+        python ${params.scriptDir}/0_unzip_input_data.py ${params.projectDir}
+        """
+    }
+
+    /*
      * 1) Download / tidy raw data
      */
     process GET_DATA {
