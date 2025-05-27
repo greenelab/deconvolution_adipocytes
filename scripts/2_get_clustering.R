@@ -112,8 +112,13 @@ run_kmeans <- function(samp_x_gene) {
 # We will run the NMF clustering on raw counts/2^(...) scaled data
 # For NMF, we need row=genes, col=samples => transpose
 run_nmf <- function(samp_x_gene) {
+    # ── log2 transform ────────────────────────────────────────
+  samp_x_gene <- log2(samp_x_gene + 1)          # still non-negative
   gene_x_samp <- t(samp_x_gene)  # row=genes, col=samples
-  # ensure positivity
+    #r ── emove rows that are entirely 0/NA ─────────────────────
+  keep <- rowSums(gene_x_samp, na.rm = TRUE) > 0
+  gene_x_samp <- gene_x_samp[keep, , drop = FALSE]
+  # ──  and ensure positivity  ─────────────────────
   minval <- min(gene_x_samp, na.rm=TRUE)
   if (minval < 0) {
     gene_x_samp <- gene_x_samp - minval + 1e-3
