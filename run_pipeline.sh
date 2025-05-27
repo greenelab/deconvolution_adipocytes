@@ -49,7 +49,7 @@ for (p in pkgs_bioc)
 
 # example GitHub install (replace with the repo that actually hosts InstaPrism)
 if (!requireNamespace("InstaPrism", quietly = TRUE))
-    remotes::install_github("JinmiaoChenLab/InstaPrism")
+    devtools::install_github("humengying0907/InstaPrism")
 RSCRIPT
 
 # --------------------------------------------------
