@@ -226,10 +226,19 @@ all_sc_expr <- cbind(rep1_sc_matrix_subset,
                      rep8_sc_matrix_subset)
 
 colnames(all_sc_expr) <- all_sc_overlap_cells_labeled[,1]
-  #using cell barcodes for column names
+#using cell barcodes for column names
 rownames(all_sc_expr) <- rep1_sc_features[,2]
-  #using GeneCards symbols for gene names as that is what is used in the adipocyte snRNAseq data
 
+# ────────────────────────────────────────────────────────────────
+# ► REMOVE cells labelled "Unknown1" or "Unknown2"
+unwanted <- c("Unknown1", "Unknown2")
+keep      <- !(all_sc_overlap_cells_labeled$cellType %in% unwanted)
+
+all_sc_overlap_cells_labeled <- all_sc_overlap_cells_labeled[keep, ]
+all_sc_expr <- all_sc_expr[, keep]    # drop the same columns in the matrix
+# ────────────────────────────────────────────────────────────────
+
+#using GeneCards symbols for gene names as that is what is used in the adipocyte snRNAseq data
 # Removing the subsetted matrices from R's memory to save space
 rm(rep1_sc_matrix_subset,
    rep2_sc_matrix_subset,
