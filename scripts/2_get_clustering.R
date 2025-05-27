@@ -134,6 +134,9 @@ run_nmf <- function(samp_x_gene) {
 # cOV expects row=genes, col=samples, plus *actual Entrez IDs* for geneIDs.
 # We'll do the same transpose, then map gene symbols -> entrez IDs
 run_consensusOV <- function(samp_x_gene) {
+
+  # put everything on ~log₂ scale 
+  samp_x_gene <- log2(samp_x_gene + 1)
   # transpose => row=genes, col=samples
   gene_x_samp <- t(samp_x_gene)
   
