@@ -65,8 +65,8 @@ cell_type_labels <- fread(file.path(output_data,"sc_sn_reference_data/reference_
 cell_type_labels <- cell_type_labels[,"cellType"]
 
 #  Remove the unwanted genes *only for the adipocyte run* intersection genes based on previous work
-# scExpr_all <- scExpr_all[
-#   !rownames(scExpr_all) %in% genes_to_remove, ]
+scExpr_all <- scExpr_all[
+  !rownames(scExpr_all) %in% genes_to_remove, ]
 
 ##########################################################
 # 2) Select 500 cells of each cell type from the large 
@@ -108,14 +108,17 @@ cell_type_labels_subset_no_adipos <- cell_type_labels_subset_all[-adipos]
 # 3) Create and save reference objects for input
 #    into InstaPrism
 ##########################################################
+# Create binary cell state label: 1 for epithelial, 0 for all others
+cell_state_labels_no_adipos <- ifelse(grepl("epithelial", tolower(cell_type_labels_subset_no_adipos)), 1, 0)
+cell_state_labels_all <- ifelse(grepl("epithelial", tolower(cell_type_labels_subset_all)), 1, 0)
 
 # Create reference objects for input into InstaPrism
 refPhi_obj_all = refPrepare(sc_Expr = scExpr_subset_all,
                         cell.type.labels = cell_type_labels_subset_all,
-                        cell.state.labels = cell_type_labels_subset_all)
+                        cell.state.labels = cell_state_labels_all)
 refPhi_obj_no_adipos = refPrepare(sc_Expr = scExpr_subset_no_adipos,
                             cell.type.labels = cell_type_labels_subset_no_adipos,
-                            cell.state.labels = cell_type_labels_subset_no_adipos)
+                            cell.state.labels = cell_state_labels_no_adipos)
 
 # Write these reference objects as files
 dir.create(file.path(instaprism_folder,"instaprism_reference_objects"), recursive = TRUE, showWarnings = FALSE)
