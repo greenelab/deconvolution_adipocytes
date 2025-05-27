@@ -83,7 +83,7 @@ read_labels <- function(n){
 
 # Reading the files
 for (n in c(seq.int(1,8))) {
-  print(paste0("reading scRNAseq files, rep ",n))
+  print(paste0("Reading scRNAseq files, rep ",n))
   assign(paste0("rep",n,"_sc_matrix"), read_matrix(n))
   assign(paste0("rep",n,"_sc_barcodes"), read_barcodes(n))
   assign(paste0("rep",n,"_sc_features"), read_features(n))
@@ -356,7 +356,7 @@ gc()
 
 # As these are nuclei, there should not be any mitochondrial gene RNAs present.
 # However, nearly all of these samples have some amount of mitochondrial gene RNA.
-# Therefore we will filter out any samples with >50 total mitochondrial gene reads,
+# Therefore we will filter out any samples with >10 total mitochondrial gene reads,
 # as well as any sample with >5% of all reads coming from mitochondrial genes.
 
 # Removing samples with >50 total mitochondrial gene reads
@@ -365,8 +365,8 @@ for (n in c(seq.int(1,length(adipose_file_names)))) {
   mito_gene_indices <- grep("MT-", rownames(get(paste0("adipose",n,"_subset"))))
   mito_genes <- get(paste0("adipose",n,"_subset"))[mito_gene_indices,]
   
-  # Select the samples (columns) that have >50 reads of any mitochondrial genes
-  mito_samples <- which(colSums(mito_genes) > 50)
+  # Select the samples (columns) that have >10 reads of any mitochondrial genes
+  mito_samples <- which(colSums(mito_genes) > 10)
   print(paste0("Identified ",length(mito_samples)," samples with >50 mitochondrial gene reads in adipose",
                n,"_subset, of ",ncol(mito_genes)," total samples."))
   
@@ -377,7 +377,7 @@ for (n in c(seq.int(1,length(adipose_file_names)))) {
     }
 }
 
-# Removing samples with >5% of all reads coming from mitochondrial genes
+# Removing samples with >% of all reads coming from mitochondrial genes
 for (n in c(seq.int(1,length(adipose_file_names)))) {
   # Find mitochondrial genes (gene names starting with "MT-")
   mito_gene_indices <- grep("MT-", rownames(get(paste0("adipose",n,"_subset"))))
@@ -387,9 +387,9 @@ for (n in c(seq.int(1,length(adipose_file_names)))) {
   mito_genes_sum <- as.vector(colSums(get(paste0("adipose",n,"_subset"))[mito_gene_indices,]))
   all_genes_sum <- as.vector(colSums(get(paste0("adipose",n,"_subset"))))
   proportions <- mito_genes_sum / all_genes_sum
-  # Select the samples which have >5% of all reads coming from mitochondrial genes
-  indices <- which(proportions > 0.05)
-  print(paste0("Identified ",length(indices)," samples with >5% of all reads coming from mitochondrial genes in adipose",
+  # Select the samples which have >2% of all reads coming from mitochondrial genes
+  indices <- which(proportions > 0.02)
+  print(paste0("Identified ",length(indices)," samples with >2% of all reads coming from mitochondrial genes in adipose",
                n,"_subset, of ",length(mito_genes_sum)," total samples."))
   
   if(length(indices) != 0){
@@ -400,13 +400,18 @@ for (n in c(seq.int(1,length(adipose_file_names)))) {
 }
 
 # Now we will use the Seurat package to remove low-quality nuclei, empty droplets, and nuclei doublets/multiplets.
-# We will filter out samples that express fewer than 250 unique genes (likely low quality), 
-# as well as samples that express greater than 4000 unique genes (likely doublet/multiplet).
-for (n in c(seq.int(1,length(adipose_file_names)))) {
-  obj <- CreateSeuratObject(counts = get(paste0("adipose",n,"_subset")))
-  low_genes <- which(obj$nFeature_RNA < 250)
-  high_genes <- which(obj$nFeature_RNA > 4000)
-  print(paste0("Identified ",length(low_genes)," samples with <250 unique genes expressed and ",length(high_genes),
+# We will filter out samples that express fewer than 200 unique genes (likely low quality), 
+# as well as samples that express greater than 2500 unique genes (likely doublet/multiplet).
+for (n in seq_along(adipose_file_names)) {
+  mat <- get(paste0("adipose",n,"_subset"))
+  if (ncol(mat) == 0) {
+    message("Skipping adipose", n, ": no cells remain after mito filtering")
+    next
+  }
+  obj <- CreateSeuratObject(counts = mat)
+  low_genes <- which(obj$nFeature_RNA < 200)
+  high_genes <- which(obj$nFeature_RNA > 2500)
+  print(paste0("Identified ",length(low_genes)," samples with <200 unique genes expressed and ",length(high_genes),
                " samples with >4000 unique genes expressed in adipose",n,"_subset, of ",ncol(obj)," total samples."))
   remove <- c(low_genes, high_genes)
   if(length(remove) != 0){

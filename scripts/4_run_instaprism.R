@@ -65,8 +65,8 @@ cell_type_labels <- fread(file.path(output_data,"sc_sn_reference_data/reference_
 cell_type_labels <- cell_type_labels[,"cellType"]
 
 #  Remove the unwanted genes *only for the adipocyte run* intersection genes based on previous work
-scExpr_subset_all <- scExpr_subset_all[
-  !rownames(scExpr_subset_all) %in% genes_to_remove, ]
+# scExpr_all <- scExpr_all[
+#   !rownames(scExpr_all) %in% genes_to_remove, ]
 
 ##########################################################
 # 2) Select 500 cells of each cell type from the large 
@@ -157,7 +157,7 @@ for (ds in dataset_list){
 for (ds in dataset_list){
   print(paste0("Running InstaPrism (with adipocytes) on ", ds))
   instaprism_output <- InstaPrism(bulk_Expr = get(paste0("bulk_expr_", ds)),
-                                  refPhi_cs = refPhi_obj_all)
+                                  refPhi_cs = refPhi_obj_all, input_type = "refPhi_cs")
   assign(paste0("instaprism_output_", ds, "_with_adipocytes"),
          instaprism_output)
 }
@@ -166,7 +166,7 @@ for (ds in dataset_list){
 for (ds in dataset_list){
   print(paste0("Running InstaPrism (no adipocytes) on ", ds))
   instaprism_output <- InstaPrism(bulk_Expr = get(paste0("bulk_expr_", ds)),
-                                  refPhi_cs = refPhi_obj_no_adipos)
+                                  refPhi_cs = refPhi_obj_no_adipos, input_type = "refPhi_cs")
   assign(paste0("instaprism_output_", ds, "_no_adipocytes"),
          instaprism_output)
 }
