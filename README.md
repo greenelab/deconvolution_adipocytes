@@ -40,6 +40,8 @@ Prior to running these scripts, please ensure that the below raw data files have
 ### From https://github.com/nrosed/hgsc_characterization/tree/master: 
 - /data/rna_seq_pilot_and_new/salmon_raw_counts_for_way_pipeline.tsv
 - /data/rna_seq_whites/salmon_raw_counts_for_way_pipeline_whites.tsv
+- /data/rna_seq_whites/sample_metadata_whites.tsv
+- /data/rna_seq_pilot_and_new/sample_metadata.tsv
 ## TCGA bulk dataset:
 ### From https://gdc.cancer.gov/about-data/publications/pancanatlas:
 - EBPlusPlusAdjustPANCAN_IlluminaHiSeq_RNASeqV2.geneExp.tsv
