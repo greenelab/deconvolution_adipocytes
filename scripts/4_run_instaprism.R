@@ -108,10 +108,9 @@ cell_type_labels_subset_no_adipos <- cell_type_labels_subset_all[-adipos]
 # 3) Create and save reference objects for input
 #    into InstaPrism
 ##########################################################
-# Create binary cell state label: 1 for epithelial, 0 for all others
-cell_state_labels_no_adipos <- ifelse(grepl("Epithelial cells", tolower(cell_type_labels_subset_no_adipos)), 1, 0)
-cell_state_labels_all <- ifelse(grepl("Epithelial cells", tolower(cell_type_labels_subset_all)), 1, 0)
-
+# Assign a uniform cell state label of 0 to all cells
+cell_state_labels_all <- rep(0, length(cell_type_labels_subset_all))
+cell_state_labels_no_adipos <- rep(0, length(cell_type_labels_subset_no_adipos))
 # Create reference objects for input into InstaPrism
 refPhi_obj_all = refPrepare(sc_Expr = scExpr_subset_all,
                         cell.type.labels = cell_type_labels_subset_all,
