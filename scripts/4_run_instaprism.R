@@ -108,16 +108,13 @@ cell_type_labels_subset_no_adipos <- cell_type_labels_subset_all[-adipos]
 # 3) Create and save reference objects for input
 #    into InstaPrism
 ##########################################################
-# Assign a uniform cell state label of 0 to all cells
-cell_state_labels_all <- rep(0, length(cell_type_labels_subset_all))
-cell_state_labels_no_adipos <- rep(0, length(cell_type_labels_subset_no_adipos))
 # Create reference objects for input into InstaPrism
 refPhi_obj_all = refPrepare(sc_Expr = scExpr_subset_all,
                         cell.type.labels = cell_type_labels_subset_all,
-                        cell.state.labels = cell_state_labels_all)
+                        cell.state.labels = cell_type_labels_subset_all)
 refPhi_obj_no_adipos = refPrepare(sc_Expr = scExpr_subset_no_adipos,
                             cell.type.labels = cell_type_labels_subset_no_adipos,
-                            cell.state.labels = cell_state_labels_no_adipos)
+                            cell.state.labels = cell_type_labels_subset_no_adipos)
 
 # Write these reference objects as files
 dir.create(file.path(instaprism_folder,"instaprism_reference_objects"), recursive = TRUE, showWarnings = FALSE)
@@ -159,7 +156,7 @@ for (ds in dataset_list){
 for (ds in dataset_list){
   print(paste0("Running InstaPrism (with adipocytes) on ", ds))
   instaprism_output <- InstaPrism(bulk_Expr = get(paste0("bulk_expr_", ds)),
-                                  refPhi_cs = refPhi_obj_all, input_type = "refPhi_cs")
+                                  refPhi_cs = refPhi_obj_all, input_type = "refPhi_cs", n.iter = 5000)
   assign(paste0("instaprism_output_", ds, "_with_adipocytes"),
          instaprism_output)
 }
@@ -168,7 +165,7 @@ for (ds in dataset_list){
 for (ds in dataset_list){
   print(paste0("Running InstaPrism (no adipocytes) on ", ds))
   instaprism_output <- InstaPrism(bulk_Expr = get(paste0("bulk_expr_", ds)),
-                                  refPhi_cs = refPhi_obj_no_adipos, input_type = "refPhi_cs")
+                                  refPhi_cs = refPhi_obj_no_adipos, input_type = "refPhi_cs", n.iter = 5000)
   assign(paste0("instaprism_output_", ds, "_no_adipocytes"),
          instaprism_output)
 }
