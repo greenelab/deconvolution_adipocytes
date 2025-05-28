@@ -155,8 +155,8 @@ for (ds in dataset_list){
 # Run Instaprism with adipocytes
 for (ds in dataset_list){
   print(paste0("Running InstaPrism (with adipocytes) on ", ds))
-  instaprism_output <- InstaPrism(bulk_Expr = get(paste0("bulk_expr_", ds)),
-                                  refPhi_cs = refPhi_obj_all, input_type = "refPhi_cs", n.iter = 5000)
+  instaprism_output <- InstaPrism(bulk_Expr = get(paste0("bulk_expr_", ds)),  verbose = T,
+                                  refPhi_cs = refPhi_obj_all, n.iter = 2000)
   assign(paste0("instaprism_output_", ds, "_with_adipocytes"),
          instaprism_output)
 }
@@ -164,8 +164,8 @@ for (ds in dataset_list){
 # Run Instaprism without adipocytes
 for (ds in dataset_list){
   print(paste0("Running InstaPrism (no adipocytes) on ", ds))
-  instaprism_output <- InstaPrism(bulk_Expr = get(paste0("bulk_expr_", ds)),
-                                  refPhi_cs = refPhi_obj_no_adipos, input_type = "refPhi_cs", n.iter = 5000)
+  instaprism_output <- InstaPrism(bulk_Expr = get(paste0("bulk_expr_", ds)),  verbose = T,
+                                  refPhi_cs = refPhi_obj_no_adipos, n.iter = 2000)
   assign(paste0("instaprism_output_", ds, "_no_adipocytes"),
          instaprism_output)
 }
