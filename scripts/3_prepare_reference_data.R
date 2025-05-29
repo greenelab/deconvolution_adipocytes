@@ -374,9 +374,9 @@ for (n in c(seq.int(1,length(adipose_file_names)))) {
   mito_gene_indices <- grep("MT-", rownames(get(paste0("adipose",n,"_subset"))))
   mito_genes <- get(paste0("adipose",n,"_subset"))[mito_gene_indices,]
   
-  # Select the samples (columns) that have >10 reads of any mitochondrial genes
-  mito_samples <- which(colSums(mito_genes) > 10)
-  print(paste0("Identified ",length(mito_samples)," samples with >50 mitochondrial gene reads in adipose",
+  # Select the samples (columns) that have >15 reads of any mitochondrial genes
+  mito_samples <- which(colSums(mito_genes) > 15)
+  print(paste0("Identified ",length(mito_samples)," samples with > 15 mitochondrial gene reads in adipose",
                n,"_subset, of ",ncol(mito_genes)," total samples."))
   
   if(length(mito_samples) != 0){
@@ -396,8 +396,8 @@ for (n in c(seq.int(1,length(adipose_file_names)))) {
   mito_genes_sum <- as.vector(colSums(get(paste0("adipose",n,"_subset"))[mito_gene_indices,]))
   all_genes_sum <- as.vector(colSums(get(paste0("adipose",n,"_subset"))))
   proportions <- mito_genes_sum / all_genes_sum
-  # Select the samples which have >2% of all reads coming from mitochondrial genes
-  indices <- which(proportions > 0.02)
+  # Select the samples which have >5% of all reads coming from mitochondrial genes
+  indices <- which(proportions > 0.03)
   print(paste0("Identified ",length(indices)," samples with >2% of all reads coming from mitochondrial genes in adipose",
                n,"_subset, of ",length(mito_genes_sum)," total samples."))
   
@@ -419,8 +419,8 @@ for (n in seq_along(adipose_file_names)) {
   }
   obj <- CreateSeuratObject(counts = mat)
   low_genes <- which(obj$nFeature_RNA < 200)
-  high_genes <- which(obj$nFeature_RNA > 2500)
-  print(paste0("Identified ",length(low_genes)," samples with <200 unique genes expressed and ",length(high_genes),
+  high_genes <- which(obj$nFeature_RNA > 4000)
+  print(paste0("Identified ",length(low_genes)," samples with < 200 unique genes expressed and ",length(high_genes),
                " samples with >4000 unique genes expressed in adipose",n,"_subset, of ",ncol(obj)," total samples."))
   remove <- c(low_genes, high_genes)
   if(length(remove) != 0){
