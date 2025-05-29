@@ -368,43 +368,35 @@ gc()
 # Therefore we will filter out any samples with >15 total mitochondrial gene reads,
 # as well as any sample with >5% of all reads coming from mitochondrial genes.
 
-# Removing samples with >50 total mitochondrial gene reads
-for (n in c(seq.int(1,length(adipose_file_names)))) {
-  # Find mitochondrial genes (gene names starting with "MT-")
-  mito_gene_indices <- grep("MT-", rownames(get(paste0("adipose",n,"_subset"))))
-  mito_genes <- get(paste0("adipose",n,"_subset"))[mito_gene_indices,]
-  
-  # Select the samples (columns) that have > 15 reads of any mitochondrial genes
-  mito_samples <- which(colSums(mito_genes) > 15)
-  print(paste0("Identified ",length(mito_samples)," samples with > 15 mitochondrial gene reads in adipose",
-               n,"_subset, of ",ncol(mito_genes)," total samples."))
-  
-  if(length(mito_samples) != 0){
-    # Remove the identified columns from the matrix
-    assign(paste0("adipose",n,"_subset"),
-           get(paste0("adipose",n,"_subset"))[,-mito_samples])
-    }
+# Absolute MT reads > 150
+for (n in seq_along(adipose_file_names)) {
+  mat <- get(paste0("adipose", n, "_subset"))
+  if (ncol(mat) < 1) next
+  mito_idx <- grep("^MT-", rownames(mat))
+  mito_counts <- Matrix::colSums(mat[mito_idx, , drop = FALSE])
+  to_rm <- which(mito_counts > 150)
+  message("Adipose", n, ": removing ", length(to_rm),
+          " cells with > 150 MT reads (of ", ncol(mat), ")")
+  if (length(to_rm)) {
+    mat <- mat[, -to_rm, drop = FALSE]
+    assign(paste0("adipose", n, "_subset"), mat)
+  }
 }
 
-# Removing samples with >% of all reads coming from mitochondrial genes
-for (n in c(seq.int(1,length(adipose_file_names)))) {
-  # Find mitochondrial genes (gene names starting with "MT-")
-  mito_gene_indices <- grep("MT-", rownames(get(paste0("adipose",n,"_subset"))))
-  
-  # Find the sum of all mitochondrial reads and the sum of all gene reads,
-  # then divide to find the proportion
-  mito_genes_sum <- as.vector(colSums(get(paste0("adipose",n,"_subset"))[mito_gene_indices,]))
-  all_genes_sum <- as.vector(colSums(get(paste0("adipose",n,"_subset"))))
-  proportions <- mito_genes_sum / all_genes_sum
-  # Select the samples which have > 5% of all reads coming from mitochondrial genes
-  indices <- which(proportions > 0.05)
-  print(paste0("Identified ",length(indices)," samples with > 5% of all reads coming from mitochondrial genes in adipose",
-               n,"_subset, of ",length(mito_genes_sum)," total samples."))
-  
-  if(length(indices) != 0){
-    # Remove the identified columns from the matrix
-    assign(paste0("adipose",n,"_subset"),
-           get(paste0("adipose",n,"_subset"))[,-indices])
+# Relative MT fraction > 10%
+for (n in seq_along(adipose_file_names)) {
+  mat <- get(paste0("adipose", n, "_subset"))
+  if (ncol(mat) < 1) next
+  mito_idx <- grep("^MT-", rownames(mat))
+  mito_counts <- Matrix::colSums(mat[mito_idx, , drop = FALSE])
+  total_counts <- Matrix::colSums(mat)
+  frac <- mito_counts / total_counts
+  to_rm <- which(frac > 0.10)
+  message("Adipose", n, ": removing ", length(to_rm),
+          " cells with > 10% MT fraction (of ", ncol(mat), ")")
+  if (length(to_rm)) {
+    mat <- mat[, -to_rm, drop = FALSE]
+    assign(paste0("adipose", n, "_subset"), mat)
   }
 }
 
