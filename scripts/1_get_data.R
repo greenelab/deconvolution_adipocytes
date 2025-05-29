@@ -53,7 +53,7 @@ colnames(MAD_genes) <- "hgnc_symbol"
 # read Schildkraut data from file
 read_format_expr <- function(in_file, metadata_table){
   # 1) Read file with fill=TRUE to handle irregular columns
-  rnaseq_expr_df <- data.frame(fread(in_file, fill = TRUE))
+  rnaseq_expr_df <- data.frame(read.table(in_file))
   
   # 2) Remove any trailing empty columns
   empty_cols <- sapply(rnaseq_expr_df, function(x) all(is.na(x)))
