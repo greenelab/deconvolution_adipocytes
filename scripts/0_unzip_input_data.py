@@ -6,6 +6,7 @@ import os
 import sys
 import gzip
 import zipfile
+import pandas as pd
 
 def ungzip_file(gzip_path, dest_path):
     with gzip.open(gzip_path, 'rb') as f_in, open(dest_path, 'wb') as f_out:
@@ -47,6 +48,12 @@ def main(path):
                     ungzip_file(full_path, dest_path)
                 else:
                     print(f"Skipped existing file: {dest_path}")
+
+    # finally formatting the data for R:
+    W = pd.read_csv(f"{path}salmon_raw_counts_for_way_pipeline_whites.tsv", index_col=0, sep='\t')
+    W.to_csv(f"{path}salmon_raw_counts_for_way_pipeline_whites.tsv", sep='\t')
+    B = pd.read_csv(f"{path}salmon_raw_counts_for_way_pipeline.tsv", index_col=0, sep='\t')
+    B.to_csv(f"{path}salmon_raw_counts_for_way_pipeline.tsv", sep='\t')
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
