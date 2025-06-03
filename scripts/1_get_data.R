@@ -252,9 +252,9 @@ message("Processing TCGA_bulk (RNA-seq)")
   tcga_bulk_info <- readxl::read_excel(file.path(input_data,"TCGA-CDR-SupplementalTableS1.xlsx"),
                                                    sheet = "TCGA-CDR", na = "#N/A")
   # Use the supplemental info table to find the HGSOC sample IDs
-  hgsoc_sample_indices <- tcga_bulk_info$type=="OV" &
-                          tcga_bulk_info$histological_type=="Serous Cystadenocarcinoma" &
-                          tcga_bulk_info$histological_grade=="G3"
+  hgsoc_sample_indices <- tcga_bulk_info$type == "OV" &
+                          tcga_bulk_info$histological_type == "Serous Cystadenocarcinoma" &
+                          tcga_bulk_info$histological_grade %in% c("G3", "G4") 
   hgsoc_sample_IDs <- tcga_bulk_info$bcr_patient_barcode[hgsoc_sample_indices]
   # Filter TCGA bulk to only include HGSOC
   tcga_bulk_dta <- tcga_bulk_dta[,colnames(tcga_bulk_dta) %in% hgsoc_sample_IDs]
