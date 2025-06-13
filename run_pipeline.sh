@@ -47,7 +47,7 @@ for (p in pkgs_bioc)
   if (!requireNamespace(p, quietly = TRUE))
       BiocManager::install(p, ask = FALSE, update = FALSE)
 
-# example GitHub install (replace with the repo that actually hosts InstaPrism)
+# GitHub install InstaPrism
 if (!requireNamespace("InstaPrism", quietly = TRUE))
     devtools::install_github("humengying0907/InstaPrism")
 RSCRIPT
