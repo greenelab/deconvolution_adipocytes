@@ -399,3 +399,7 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 .DS_Store
+
+# All input_data, except for intersecting genes csv file
+/input_data/*
+!/input_data/intersect_3d.csv
