@@ -40,6 +40,16 @@ dir.create(instaprism_folder, recursive = TRUE, showWarnings = FALSE)
 set.seed(5)
 
 ##########################################################
+# 0) Genes to remove (for adipocyte reference only)
+##########################################################
+genes_to_remove <- fread(
+  file.path(here(), "input_data", "intersect_3ds.csv"),
+  header = FALSE,        # your file has no header row
+  data.table = FALSE
+)[, 2]                   # second column holds the symbols
+genes_to_remove <- unique(na.omit(genes_to_remove))
+
+##########################################################
 # 1) Read sn+sc reference files
 ##########################################################
 
@@ -53,6 +63,10 @@ colnames(scExpr_all) <- (1:ncol(scExpr_all))
 cell_type_labels <- fread(file.path(output_data,"sc_sn_reference_data/reference_cell_types_final.csv"),
                           data.table = FALSE)
 cell_type_labels <- cell_type_labels[,"cellType"]
+
+#  Remove the unwanted genes *only for the adipocyte run* intersection genes based on previous work
+scExpr_all <- scExpr_all[
+  !rownames(scExpr_all) %in% genes_to_remove, ]
 
 ##########################################################
 # 2) Select 500 cells of each cell type from the large 
@@ -94,7 +108,6 @@ cell_type_labels_subset_no_adipos <- cell_type_labels_subset_all[-adipos]
 # 3) Create and save reference objects for input
 #    into InstaPrism
 ##########################################################
-
 # Create reference objects for input into InstaPrism
 refPhi_obj_all = refPrepare(sc_Expr = scExpr_subset_all,
                         cell.type.labels = cell_type_labels_subset_all,
@@ -142,8 +155,8 @@ for (ds in dataset_list){
 # Run Instaprism with adipocytes
 for (ds in dataset_list){
   print(paste0("Running InstaPrism (with adipocytes) on ", ds))
-  instaprism_output <- InstaPrism(bulk_Expr = get(paste0("bulk_expr_", ds)),
-                                  refPhi_cs = refPhi_obj_all)
+  instaprism_output <- InstaPrism(bulk_Expr = get(paste0("bulk_expr_", ds)),  verbose = T,
+                                  refPhi_cs = refPhi_obj_all, n.iter = 2000)
   assign(paste0("instaprism_output_", ds, "_with_adipocytes"),
          instaprism_output)
 }
@@ -151,8 +164,8 @@ for (ds in dataset_list){
 # Run Instaprism without adipocytes
 for (ds in dataset_list){
   print(paste0("Running InstaPrism (no adipocytes) on ", ds))
-  instaprism_output <- InstaPrism(bulk_Expr = get(paste0("bulk_expr_", ds)),
-                                  refPhi_cs = refPhi_obj_no_adipos)
+  instaprism_output <- InstaPrism(bulk_Expr = get(paste0("bulk_expr_", ds)),  verbose = T,
+                                  refPhi_cs = refPhi_obj_no_adipos, n.iter = 2000)
   assign(paste0("instaprism_output_", ds, "_no_adipocytes"),
          instaprism_output)
 }

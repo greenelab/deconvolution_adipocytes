@@ -53,7 +53,10 @@ colnames(MAD_genes) <- "hgnc_symbol"
 # read Schildkraut data from file
 read_format_expr <- function(in_file, metadata_table){
   # 1) Read file with fill=TRUE to handle irregular columns
-  rnaseq_expr_df <- data.frame(fread(in_file, fill = TRUE))
+  rnaseq_expr_df <- fread(in_file,
+                          header = TRUE,
+                          data.table = FALSE,
+                          fill   = TRUE)
   
   # 2) Remove any trailing empty columns
   empty_cols <- sapply(rnaseq_expr_df, function(x) all(is.na(x)))
@@ -207,7 +210,7 @@ if (file.exists(clust_file)) {
 message("Processing SchildkrautB (RNA-seq)")
 schildB_metadata <- fread(file.path(input_data, "main_AA_metadata_table.tsv"))
 schildB_res <- read_format_expr(
-  in_file = file.path(input_data, "salmon_normalized_filtered_for_way_pipeline.tsv"),
+  in_file = file.path(input_data, "salmon_raw_counts_for_way_pipeline.tsv"),
   metadata_table = schildB_metadata
 )
 save_dual_versions(
@@ -220,7 +223,7 @@ save_dual_versions(
 message("Processing SchildkrautW (RNA-seq)")
 schildW_metadata <- fread(file.path(input_data, "main_white_metadata_table.tsv"))
 schildW_res <- read_format_expr(
-  in_file = file.path(input_data, "salmon_normalized_filtered_for_way_pipeline_whites.tsv"),
+  in_file = file.path(input_data, "salmon_raw_counts_for_way_pipeline_whites.tsv"),
   metadata_table = schildW_metadata
 )
 save_dual_versions(
@@ -249,9 +252,9 @@ message("Processing TCGA_bulk (RNA-seq)")
   tcga_bulk_info <- readxl::read_excel(file.path(input_data,"TCGA-CDR-SupplementalTableS1.xlsx"),
                                                    sheet = "TCGA-CDR", na = "#N/A")
   # Use the supplemental info table to find the HGSOC sample IDs
-  hgsoc_sample_indices <- tcga_bulk_info$type=="OV" &
-                          tcga_bulk_info$histological_type=="Serous Cystadenocarcinoma" &
-                          tcga_bulk_info$histological_grade=="G3"
+  hgsoc_sample_indices <- tcga_bulk_info$type == "OV" &
+                          tcga_bulk_info$histological_type == "Serous Cystadenocarcinoma" &
+                          tcga_bulk_info$histological_grade %in% c("G3", "G4") 
   hgsoc_sample_IDs <- tcga_bulk_info$bcr_patient_barcode[hgsoc_sample_indices]
   # Filter TCGA bulk to only include HGSOC
   tcga_bulk_dta <- tcga_bulk_dta[,colnames(tcga_bulk_dta) %in% hgsoc_sample_IDs]
@@ -268,6 +271,8 @@ message("Processing TCGA_bulk (RNA-seq)")
   rownames(tcga_bulk_dta) <- gene_names[-rows_to_remove]
   # Set any NA values to zero
   tcga_bulk_dta[is.na(tcga_bulk_dta)] <- 0
+  # Set any negative values to zero
+  tcga_bulk_dta[tcga_bulk_dta < 0] <- 0
 
 message("Processing TCGA_microarray (microarray)")
   
