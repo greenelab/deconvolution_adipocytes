@@ -10,32 +10,13 @@
 nextflow.enable.dsl = 2
 
 /*
- * 0) Decompress all input data
- */
-process UNZIP {
-    tag 'unzip_data'
-    
-    input:
-    val dummy_input // Receive the trigger
-    
-    output:
-    val true, emit: unzip_complete // Use emit instead of into
-    
-    script:
-    """
-    cd ${params.projectDir}
-    Rscript --vanilla ${params.scriptDir}/00_unzip_input_data.R ${params.projectDir}
-    """
-}
-
-/*
  * 1) Load the renv
  */
 process LOAD_RENV {
     tag '01_load_renv'
     
     input:
-    val dummy_input // Receive the trigger from UNZIP
+    val dummy_input // Receive the trigger
     
     output:
     val true, emit: renv_loaded
@@ -145,8 +126,7 @@ workflow {
     trigger_channel = Channel.value(true)
     
     // Run processes in strict order using the output of the previous as input for the next
-    UNZIP(trigger_channel)
-    LOAD_RENV(UNZIP.out.unzip_complete)
+    LOAD_RENV(trigger_channel)
     GET_DATA(LOAD_RENV.out.renv_loaded)
     GET_CLUSTERING(GET_DATA.out.data_ready)
     PREP_REF_DATA(GET_CLUSTERING.out.clustering_done)

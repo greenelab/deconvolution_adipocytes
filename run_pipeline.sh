@@ -9,7 +9,7 @@
 #SBATCH --ntasks-per-node=64
 #SBATCH --nodes=1 
 
-set -euo pipefail
+set -eo pipefail
 
 # --------------------------------------------------
 # 0) Resolve project root (directory of this script)
@@ -30,7 +30,21 @@ then
 fi
 
 # --------------------------------------------------
-# 2) Run the pipeline
+# 2) Load Conda and activate env_hgsoc
+# --------------------------------------------------
+source "$(conda info --base)/etc/profile.d/conda.sh"
+
+ENV_YML="${PRJ_DIR}/env_hgsoc.yml"
+
+# create the env once; reuse afterwards
+if ! conda env list | grep -q '^env_hgsoc '; then
+    echo "••• Creating Conda environment env_hgsoc"
+    conda env create -f "${ENV_YML}"
+fi
+conda activate env_hgsoc
+
+# --------------------------------------------------
+# 3) Run the pipeline
 # --------------------------------------------------
 echo "••• Launching Nextflow"
 nextflow run main.nf -profile local -resume
