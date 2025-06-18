@@ -52,7 +52,8 @@ conda activate env_hgsoc
 # 3) Run the pipeline
 # --------------------------------------------------
 echo "••• Launching Nextflow"
-nextflow run main.nf -profile local -resume
-# or nextflow run main.nf -profile slurm -resume, if on HPC
+nextflow run main.nf -profile slurm -resume
+# nextflow run main.nf -profile slurm -resume, if on HPC
+# nextflow run main.nf -profile local -resume, if running locally
 
 echo "••• Pipeline finished 🎉"
