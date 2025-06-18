@@ -1,5 +1,5 @@
 ##########################################################################################
-### 3_prepare_reference_data.R
+### 04_prepare_reference_data.R
 ### 
 ### This script creates a single-cell/single-nucleus reference matrix for use as input into
 ### InstaPrism. It requires single cell RNA sequencing data of HGSOC

@@ -1,5 +1,5 @@
 ##########################################################################################
-### 4_run_instaprism.R
+### 05_run_instaprism.R
 ### 
 ### This script runs InstaPrism, an R package that performs deconvolution with a similar
 ### but faster method to BayesPrism. First, it loads in the reference single cell plus

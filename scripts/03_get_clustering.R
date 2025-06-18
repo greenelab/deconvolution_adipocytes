@@ -1,5 +1,5 @@
 ##########################################################################################
-### 2_get_clustering.R
+### 03_get_clustering.R
 ### 
 ### This script performs k-means clustering (k=2,3,4), NMF clustering (k=2,3,4), and 
 ### consensusOV subtyping for each bulk dataset. For k-means clustering, it uses log10(...+1)

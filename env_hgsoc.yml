@@ -1,0 +1,16 @@
+name: env_hgsoc
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  # ---- core language runtimes ----
+  - r-base=4.4.1
+  - r-irkernel                
+  - python=3.10.16
+  - nextflow                   # workflow engine
+  - openjdk                    # Nextflow runtime
+   # ---- Python packages ---- 
+  - pandas
+  - numpy
+  - jupyterlab
+  - matplotlib

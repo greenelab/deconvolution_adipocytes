@@ -1,5 +1,5 @@
 ##########################################################################################
-### 1_get_data.R
+### 02_get_data.R
 ### 
 ### This script reads the bulk RNA sequencing and microarray datasets and filters them
 ### to only include genes present in one common gene mapping list. It transforms the

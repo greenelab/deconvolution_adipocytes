@@ -1,5 +1,5 @@
 ##########################################################################################
-### 5_visualize_instaprism_output.R
+### 06_visualize_instaprism_output.R
 ### 
 ### This script creates several figures to visualize the deconvolution results generated
 ### in the previous script, and compare the results when run with and without adipocyte
