@@ -24,7 +24,7 @@ process UNZIP {
     script:
     """
     cd ${params.projectDir}
-    python ${params.scriptDir}/00_unzip_input_data.py ${params.projectDir}
+    Rscript --vanilla ${params.scriptDir}/00_unzip_input_data.R ${params.projectDir}
     """
 }
 
