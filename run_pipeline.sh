@@ -18,44 +18,22 @@ PRJ_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "${PRJ_DIR}"
 
 # --------------------------------------------------
-# 1) Load Conda and activate env_hgsoc
+# 1) Ensure that Nextflow is installed
 # --------------------------------------------------
-source "$(conda info --base)/etc/profile.d/conda.sh"
-
-ENV_YML="${PRJ_DIR}/environments/env_hgsoc.yml"
-
-# create the env once; reuse afterwards
-if ! conda env list | grep -q '^env_hgsoc '; then
-    echo "••• Creating Conda environment env_hgsoc"
-    conda env create -f "${ENV_YML}"
+if ! command -v nextflow &> /dev/null
+then
+    echo "Error: Nextflow is not installed or not found in your PATH."
+    echo "Please install Nextflow and ensure it's accessible in your system's PATH."
+    echo "You can typically install it with: curl -s https://get.nextflow.io | bash"
+    echo "Then move the 'nextflow' executable to a directory in your PATH (e.g., ~/bin or /usr/local/bin)."
+    exit 1 # Exit the script with an error code
 fi
-conda activate env_hgsoc          # puts R, Nextflow, compilers on PATH
 
 # --------------------------------------------------
-# 2) Install R packages that Conda cannot provide
-# --------------------------------------------------
-Rscript - <<'RSCRIPT'
-pkgs_cran  <- c("InstaPrism")                    # GitHub-only
-pkgs_bioc  <- c()                               # add names if Bioc, but absent on bioconda
-
-if (!requireNamespace("BiocManager", quietly = TRUE))
-    install.packages("BiocManager", repos = "https://cloud.r-project.org")
-if (!requireNamespace("remotes", quietly = TRUE))
-    install.packages("remotes", repos = "https://cloud.r-project.org")
-
-for (p in pkgs_bioc)
-  if (!requireNamespace(p, quietly = TRUE))
-      BiocManager::install(p, ask = FALSE, update = FALSE)
-
-# GitHub install InstaPrism
-if (!requireNamespace("InstaPrism", quietly = TRUE))
-    devtools::install_github("humengying0907/InstaPrism")
-RSCRIPT
-
-# --------------------------------------------------
-# 3) Run the pipeline
+# 2) Run the pipeline
 # --------------------------------------------------
 echo "••• Launching Nextflow"
-nextflow run main.nf -profile slurm -resume
+nextflow run main.nf -profile local -resume
+# or nextflow run main.nf -profile slurm -resume, if on HPC
 
 echo "••• Pipeline finished 🎉"
