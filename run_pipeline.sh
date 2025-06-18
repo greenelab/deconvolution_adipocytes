@@ -44,6 +44,11 @@ fi
 conda activate env_hgsoc
 
 # --------------------------------------------------
+# OPTIONAL: unzip .gz and .zip files in input_data
+# --------------------------------------------------
+# python scripts/00_unzip_input_data.py
+
+# --------------------------------------------------
 # 3) Run the pipeline
 # --------------------------------------------------
 echo "••• Launching Nextflow"
