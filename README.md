@@ -15,8 +15,8 @@ The purpose of the code in this repository is to use the InstaPrism R package (h
 Bayes Prism requires a single cell reference dataset to perform deconvolution. However, it has been previously shown that certain cell types, notably adipocytes, are present in bulk tumor samples but largely absent from single cell RNA sequencing results (https://www.biorxiv.org/content/10.1101/2024.04.25.590992v1). However, adipocytes can be captured using single nucleus RNA sequencing. Here, we incorporate single nucleus RNA sequencing data from adipocytes, in addition to single cell RNA sequencing data of HGSOC, in deconvolution of bulk HGSOC RNA sequencing and microarray data. 
 # 2) Scripts:
 Prior to running this pipeline, please download the required data as outlined below in “Input and output data preparation and organization.” 
-## 00_unzip_input_data.R
-This script checks for any zipped .gz or .zip files present in input_data, and will unzip anything it finds.
+## (OPTIONAL) 00_unzip_input_data.R
+This script checks for any zipped .gz or .zip files present in input_data, and will unzip and format anything it finds. It will not run automatically, and is commented out in the shell script. Uncomment to use if needed.
 ## 01_load_renv.R
 This script loads the environment using the renv lockfile.
 ## 02_get_data.R
@@ -131,4 +131,4 @@ Prior to running these scripts, please ensure that the below raw data files (.gz
 #### Metadata
 - GSE176171_cell_metadata.tsv.gz
 # 4) Running the pipeline:
-The pipeline can be run by executing run_pipeline.sh, which will in turn run main.nf, a Nextflow pipeline to execute the scripts in order. run_pipeline.sh has configuration profile options to run either locally or on high performance computing (HPC) using Slurm. Be sure to open the file before running and ensure that the appropriate profile is active (both available in comments of script). 
+The pipeline can be run by executing run_pipeline.sh, which will in turn run main.nf, a Nextflow pipeline to execute the scripts in order (except for the optional unzipping script). run_pipeline.sh has configuration profile options to run either locally or on high performance computing (HPC) using Slurm. Be sure to open the file before running and ensure that the appropriate profile is active (both available in comments of script). Please also uncomment running the unzipping script if needed.
