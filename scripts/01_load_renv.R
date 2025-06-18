@@ -9,4 +9,7 @@
 if (!requireNamespace("renv", quietly = TRUE)) {
   install.packages("renv", version = "1.1.0")  # Install renv if not already installed
 }
+
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+
 renv::restore()
