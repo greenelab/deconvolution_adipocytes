@@ -9,53 +9,85 @@
 #SBATCH --ntasks-per-node=64
 #SBATCH --nodes=1 
 
-set -euo pipefail
+set -eo pipefail
 
 # --------------------------------------------------
 # 0) Resolve project root (directory of this script)
 # --------------------------------------------------
-PRJ_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+# Check if SLURM_SUBMIT_DIR is set (indicates Slurm environment)
+if [ -n "${SLURM_SUBMIT_DIR}" ]; then
+    # Running on HPC via Slurm
+    PRJ_DIR="${SLURM_SUBMIT_DIR}"
+    RUN_MODE="HPC"
+    echo "Running on HPC (Slurm). Project directory: ${PRJ_DIR}"
+else
+    # Running locally
+    # Get the directory where the script itself is located when run locally
+    PRJ_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+    RUN_MODE="LOCAL"
+    echo "Running locally. Project directory: ${PRJ_DIR}"
+fi
+
+# Change to the project directory
 cd "${PRJ_DIR}"
+echo "Current working directory: $(pwd)"
 
 # --------------------------------------------------
-# 1) Load Conda and activate env_hgsoc
+# 0.5) Specifying paths specific to Alpine
 # --------------------------------------------------
-source "$(conda info --base)/etc/profile.d/conda.sh"
+# export paths specific to Alpine
+if [ "${RUN_MODE}" == "HPC" ]; then
+    export PATH=/usr/include:$PATH
+    export CPATH=/usr/include/:$CPATH
+    export C_INCLUDE_PATH=/usr/include/:$C_INCLUDE_PATH
+fi
 
-ENV_YML="${PRJ_DIR}/environments/env_hgsoc.yml"
+# --------------------------------------------------
+# 1) Load miniforge, activate Conda environment env_hgsoc
+# --------------------------------------------------
+module load miniforge
+
+ENV_YML="${PRJ_DIR}/env_hgsoc.yml"
 
 # create the env once; reuse afterwards
-if ! conda env list | grep -q '^env_hgsoc '; then
+ if ! conda env list | grep -q '^env_hgsoc '; then
     echo "••• Creating Conda environment env_hgsoc"
     conda env create -f "${ENV_YML}"
+ fi
+
+echo "••• Activating Conda environment env_hgsoc"
+conda activate env_hgsoc
+
+# --------------------------------------------------
+# 2) Ensure that Nextflow is installed
+# --------------------------------------------------
+if ! command -v nextflow &> /dev/null
+then
+    echo "Error: Nextflow is not installed or not found in your PATH."
+    echo "Please install Nextflow and ensure it's accessible in your system's PATH."
+    echo "You can typically install it with: curl -s https://get.nextflow.io | bash"
+    echo "Then move the 'nextflow' executable to a directory in your PATH (e.g., ~/bin or /usr/local/bin)."
+    exit 1 # Exit the script with an error code
 fi
-conda activate env_hgsoc          # puts R, Nextflow, compilers on PATH
 
 # --------------------------------------------------
-# 2) Install R packages that Conda cannot provide
+# OPTIONAL: unzip .gz and .zip files in input_data
 # --------------------------------------------------
-Rscript - <<'RSCRIPT'
-pkgs_cran  <- c("InstaPrism")                    # GitHub-only
-pkgs_bioc  <- c()                               # add names if Bioc, but absent on bioconda
-
-if (!requireNamespace("BiocManager", quietly = TRUE))
-    install.packages("BiocManager", repos = "https://cloud.r-project.org")
-if (!requireNamespace("remotes", quietly = TRUE))
-    install.packages("remotes", repos = "https://cloud.r-project.org")
-
-for (p in pkgs_bioc)
-  if (!requireNamespace(p, quietly = TRUE))
-      BiocManager::install(p, ask = FALSE, update = FALSE)
-
-# GitHub install InstaPrism
-if (!requireNamespace("InstaPrism", quietly = TRUE))
-    devtools::install_github("humengying0907/InstaPrism")
-RSCRIPT
+# python scripts/00_unzip_input_data.py
 
 # --------------------------------------------------
 # 3) Run the pipeline
 # --------------------------------------------------
 echo "••• Launching Nextflow"
-nextflow run main.nf -profile slurm -resume
+
+# Define Nextflow's work directory based on run mode
+NEXTFLOW_WORK_DIR="${PRJ_DIR}/nextflow_work"
+
+
+if [ "${RUN_MODE}" == "HPC" ]; then
+    nextflow run main.nf -profile slurm -resume -w "${NEXTFLOW_WORK_DIR}"
+else
+    nextflow run main.nf -profile local -resume -w "${NEXTFLOW_WORK_DIR}"
+fi
 
 echo "••• Pipeline finished 🎉"

@@ -2,6 +2,7 @@
 1)	Introduction
 2)	Scripts
 3)	Input and output data preparation and organization
+4)  Running the pipeline
 # 1) Introduction:
 The purpose of the code in this repository is to use the InstaPrism R package (https://github.com/humengying0907/InstaPrism/tree/master) to run Bayes Prism deconvolution on the following bulk RNA seq and microarray datasets of high grade serous ovarian carcinoma (HGSOC) samples:
 - “SchildkrautB” – bulk RNA sequencing of HGSOC from Black patients.
@@ -13,23 +14,23 @@ The purpose of the code in this repository is to use the InstaPrism R package (h
 
 Bayes Prism requires a single cell reference dataset to perform deconvolution. However, it has been previously shown that certain cell types, notably adipocytes, are present in bulk tumor samples but largely absent from single cell RNA sequencing results (https://www.biorxiv.org/content/10.1101/2024.04.25.590992v1). However, adipocytes can be captured using single nucleus RNA sequencing. Here, we incorporate single nucleus RNA sequencing data from adipocytes, in addition to single cell RNA sequencing data of HGSOC, in deconvolution of bulk HGSOC RNA sequencing and microarray data. 
 # 2) Scripts:
-Prior to running these scripts, please download the required data as outlined below in “Input and output data preparation and organization.” Please also ensure that the renv folder has been downloaded and is in the same directory as the scripts. These scripts are intended to be run in the following order:
-### (Optional) unzip_input_data.py
-To uncompress all files in the input data requiered, if not done manually. Exmaple: python unzip_input_data.py path/to/input_data/
-## 1_get_data.R
+Prior to running this pipeline, please download the required data as outlined below in “Input and output data preparation and organization.” 
+## (OPTIONAL) 00_unzip_input_data.R
+This script checks for any zipped .gz or .zip files present in input_data, and will unzip and format anything it finds. It will not run automatically, and is commented out in the shell script. Uncomment to use if needed.
+## 01_load_renv.R
+This script loads the environment using the renv lockfile.
+## 02_get_data.R
 This script reads the bulk RNA sequencing and microarray datasets and filters them to only include genes present in one common gene mapping list. It transforms the microarray data using 2^(...) to match the scale of the bulk RNA sequencing data values  – this is used for InstaPrism deconvolution. It also transforms the bulk RNA sequencing data using log10(...+1) to match the scale of the microarray data – this is used for clustering. All of these matrices are saved in a uniform format containing on sample ID (rows) and genes (columns); file names are appended with either “asImported” or “transformed.” It also saves any metadata information (ex. prior clustering) about the samples in a separate file for reference.
-## 2_get_clustering.R
+## 03_get_clustering.R
 This script performs k-means clustering (k=2,3,4), NMF clustering (k=2,3,4), and consensusOV subtyping (https://github.com/bhklab/consensusOV) for each bulk dataset. For k-means clustering, it uses log10(...+1) transformed data (for RNAseq), and raw log2 data (for microarray). For NMF clustering and consensusOV subtyping, it uses raw counts (for RNAseq), and 2^(...) scaled "pseudocounts" data (for microarray). It saves the results in one csv file per dataset, where each row corresponds to one sample. It also saves a csv file containing the results for all datasets.
-## 3_prepare_reference_data.R
+## 04_prepare_reference_data.R
 This script creates a single-cell/single-nucleus reference matrix for use as input into InstaPrism. It requires single cell RNA sequencing data of HGSOC (from https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE217517) and cell type labels for those cells (from https://github.com/greenelab/deconvolution_pilot/tree/main/data/cell_labels). It also requires single nucleus RNA sequencing data of adipocytes (from http://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE176171). Please refer to the “Input and output data preparation and organization” subsection of README for specific files necessary. It reads in the HGSOC single cell and adipocyte single nucleus RNA sequencing data and performs some pre-processing on the adipocyte data (removing duplicate samples, removing non-adipocyte samples, removing samples with many mitochondrial gene reads, and using Seurat to remove low-quality nuclei, empty droplets, and nuclei doublets/multiplets). It then combines the single cell and single nucleus data to generate an expression matrix where each row corresponds to a gene (GeneCards symbols) and each column corresponds to a sample (each assigned a unique numerical ID). It also generates a cell type file which serves as a key, and associates each sample ID to its cell type. 
-## 4_run_instaprism.R
-This script runs InstaPrism, an R package that performs deconvolution with a similar but faster method to BayesPrism. First, it loads in the reference single cell plus single nucleus RNA sequencing reference dataset created in the previous script. Since the reference dataset is so large, it randomly selects 500 of each cell type to use. It then generates and saves two reference objects for input into InstaPrism, one with adipocytes and one without adipocytes. It runs InstaPrism twice on each of the six bulk datasets, both with and without the adipocytes in the reference data. Of note, Instaprism requires non-log-transformed bulk data, so it is performed on the original, non-transformed data for the bulk RNA sequencing datasets and on the 2^(…) transformed data for the microarray datasets.
-## 5_visualize_instaprism_outputs.R
+## 05_run_instaprism.R
+This script runs InstaPrism, an R package that performs deconvolution with a similar but faster method to BayesPrism. First, it loads in the reference single cell plus single nucleus RNA sequencing reference dataset created in the previous script. It also removes a set of previously identified genes to mitigate technical factors unique to single nucleus RNA sequencing. Since the reference dataset is so large, it also randomly selects 500 of each cell type to use. It then generates and saves two reference objects for input into InstaPrism, one with adipocytes and one without adipocytes. It runs InstaPrism twice on each of the six bulk datasets, both with and without the adipocytes in the reference data. Of note, Instaprism requires non-log-transformed bulk data, so it is performed on the original, non-transformed data for the bulk RNA sequencing datasets and on the 2^(…) transformed data for the microarray datasets.
+## 06_visualize_instaprism_outputs.R
 This script creates several figures to visualize the deconvolution results generated in the previous script, and compare the results when run with and without adipocyte single nucleus RNA sequencing data in the reference data. It creates 100% stacked bar charts to visualize the total cell proportions per bulk dataset, 100% stacked bar charts showing cell proportions per sample in each dataset, and bar charts showing the absolute change of cell type proportions in total per dataset.
 # 3) Input and output data preparation and organization:
-Prior to running these scripts, please ensure that the below raw data files have been downloaded and are present in a folder entitled “input_data” inside the same project and directory as the scripts. (The results will be created and stored in another folder inside the same directory entitled “output_data”.) Sample directory contents:
-
-![Screenshot 2025-02-25 at 2 28 25 PM](https://github.com/user-attachments/assets/b44cfc2a-8242-4f5e-ba2b-f75ff6712de9)
+Prior to running these scripts, please ensure that the below raw data files (.gz and .zip zipped files okay) have been downloaded and are present in a folder entitled “input_data” inside the same project and directory as the scripts. (The results will be created and stored in another folder inside the same directory entitled “output_data”.)
 ## SchildkrautB, SchildkrautW, and reference gene list:
 ### From https://github.com/greenelab/hgsc_characterization:
 - /reference_data/ensembl_hgnc_entrez.tsv
@@ -129,3 +130,5 @@ Prior to running these scripts, please ensure that the below raw data files have
 - GSM5820686_Hs_SAT_11-1.dge.tsv.gz
 #### Metadata
 - GSE176171_cell_metadata.tsv.gz
+# 4) Running the pipeline:
+The pipeline can be run by executing run_pipeline.sh, which will in turn run main.nf, a Nextflow pipeline to execute the scripts in order (except for the optional unzipping script). run_pipeline.sh has configuration profile options to run either locally or on high performance computing (HPC) using Slurm. Be sure to open the file before running and uncomment running the unzipping script if needed.
