@@ -131,4 +131,4 @@ Prior to running these scripts, please ensure that the below raw data files (.gz
 #### Metadata
 - GSE176171_cell_metadata.tsv.gz
 # 4) Running the pipeline:
-The pipeline can be run by executing run_pipeline.sh, which will in turn run main.nf, a Nextflow pipeline to execute the scripts in order (except for the optional unzipping script). run_pipeline.sh has configuration profile options to run either locally or on high performance computing (HPC) using Slurm. Be sure to open the file before running and ensure that the appropriate profile is active (both available in comments of script). Please also uncomment running the unzipping script if needed.
+The pipeline can be run by executing run_pipeline.sh, which will in turn run main.nf, a Nextflow pipeline to execute the scripts in order (except for the optional unzipping script). run_pipeline.sh has configuration profile options to run either locally or on high performance computing (HPC) using Slurm. Be sure to open the file before running and uncomment running the unzipping script if needed.
