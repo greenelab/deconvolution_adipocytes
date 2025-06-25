@@ -14,18 +14,40 @@ set -eo pipefail
 # --------------------------------------------------
 # 0) Resolve project root (directory of this script)
 # --------------------------------------------------
-PRJ_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd "${PRJ_DIR}"
+# Check if SLURM_SUBMIT_DIR is set (indicates Slurm environment)
+if [ -n "${SLURM_SUBMIT_DIR}" ]; then
+    # Running on HPC via Slurm
+    PRJ_DIR="${SLURM_SUBMIT_DIR}"
+    RUN_MODE="HPC"
+    echo "Running on HPC (Slurm). Project directory: ${PRJ_DIR}"
+else
+    # Running locally
+    # Get the directory where the script itself is located when run locally
+    PRJ_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+    RUN_MODE="LOCAL"
+    echo "Running locally. Project directory: ${PRJ_DIR}"
+fi
 
+# Change to the project directory
+cd "${PRJ_DIR}"
+echo "Current working directory: $(pwd)"
+
+# --------------------------------------------------
+# 0.5) Specifying paths specific to Alpine
+# --------------------------------------------------
 # export paths specific to Alpine
-export PATH=/usr/include:$PATH
-export CPATH=/usr/include/:$CPATH
-export C_INCLUDE_PATH=/usr/include/:$C_INCLUDE_PATH
+if [ "${RUN_MODE}" == "HPC" ]; then
+    export PATH=/usr/include:$PATH
+    export CPATH=/usr/include/:$CPATH
+    export C_INCLUDE_PATH=/usr/include/:$C_INCLUDE_PATH
+fi
 
 # --------------------------------------------------
 # 1) Load miniforge, activate Conda environment env_hgsoc
 # --------------------------------------------------
 module load miniforge
+
+ENV_YML="${PRJ_DIR}/env_hgsoc.yml"
 
 # create the env once; reuse afterwards
  if ! conda env list | grep -q '^env_hgsoc '; then
@@ -35,8 +57,6 @@ module load miniforge
 
 echo "••• Activating Conda environment env_hgsoc"
 conda activate env_hgsoc
-
-ENV_YML="${PRJ_DIR}/env_hgsoc.yml"
 
 # --------------------------------------------------
 # 2) Ensure that Nextflow is installed
@@ -59,8 +79,15 @@ fi
 # 3) Run the pipeline
 # --------------------------------------------------
 echo "••• Launching Nextflow"
-nextflow run main.nf -profile slurm -resume
-# nextflow run main.nf -profile slurm -resume, if on HPC
-# nextflow run main.nf -profile local -resume, if running locally
+
+# Define Nextflow's work directory based on run mode
+NEXTFLOW_WORK_DIR="${PRJ_DIR}/nextflow_work"
+
+
+if [ "${RUN_MODE}" == "HPC" ]; then
+    nextflow run main.nf -profile slurm -resume -w "${NEXTFLOW_WORK_DIR}"
+else
+    nextflow run main.nf -profile local -resume -w "${NEXTFLOW_WORK_DIR}"
+fi
 
 echo "••• Pipeline finished 🎉"
