@@ -17,8 +17,29 @@ set -eo pipefail
 PRJ_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "${PRJ_DIR}"
 
+# export paths specific to Alpine
+export PATH=/usr/include:$PATH
+export CPATH=/usr/include/:$CPATH
+export C_INCLUDE_PATH=/usr/include/:$C_INCLUDE_PATH
+
 # --------------------------------------------------
-# 1) Ensure that Nextflow is installed
+# 1) Load miniforge, activate Conda environment env_hgsoc
+# --------------------------------------------------
+module load miniforge
+
+# create the env once; reuse afterwards
+ if ! conda env list | grep -q '^env_hgsoc '; then
+    echo "••• Creating Conda environment env_hgsoc"
+    conda env create -f "${ENV_YML}"
+ fi
+
+echo "••• Activating Conda environment env_hgsoc"
+conda activate env_hgsoc
+
+ENV_YML="${PRJ_DIR}/env_hgsoc.yml"
+
+# --------------------------------------------------
+# 2) Ensure that Nextflow is installed
 # --------------------------------------------------
 if ! command -v nextflow &> /dev/null
 then
@@ -28,20 +49,6 @@ then
     echo "Then move the 'nextflow' executable to a directory in your PATH (e.g., ~/bin or /usr/local/bin)."
     exit 1 # Exit the script with an error code
 fi
-
-# --------------------------------------------------
-# 2) Load Conda and activate env_hgsoc
-# --------------------------------------------------
-source "$(conda info --base)/etc/profile.d/conda.sh"
-
-ENV_YML="${PRJ_DIR}/env_hgsoc.yml"
-
-# create the env once; reuse afterwards
-if ! conda env list | grep -q '^env_hgsoc '; then
-    echo "••• Creating Conda environment env_hgsoc"
-    conda env create -f "${ENV_YML}"
-fi
-conda activate env_hgsoc
 
 # --------------------------------------------------
 # OPTIONAL: unzip .gz and .zip files in input_data
